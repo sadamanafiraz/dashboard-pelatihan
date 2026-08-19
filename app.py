@@ -18,8 +18,8 @@ MAX_FILE_BYTES = 4 * 1024 * 1024
 ALLOWED_SUFFIXES = {".xlsx", ".xls", ".csv"}
 
 app = FastAPI(
-    title="Dashboard Pelatihan Minggu Depan",
-    version="1.0.0",
+    title="Dashboard Pelatihan GIA Corpu",
+    version="3.0.0",
     docs_url="/api/docs",
     redoc_url=None,
 )

@@ -4,7 +4,7 @@
   "functions": {
     "app.py": {
       "includeFiles": "static/**",
-      "excludeFiles": "{tests/**,preview.png,run.bat,run.sh}",
+      "excludeFiles": "{tests/**,preview*.png,run.bat,run.sh}",
       "maxDuration": 60
     }
   }

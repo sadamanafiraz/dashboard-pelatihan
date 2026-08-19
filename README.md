@@ -1,11 +1,22 @@
 # Dashboard Pelatihan Minggu Depan
 
-![Preview dashboard](preview.png)
+![Preview dashboard](preview-v3.png)
 
-Dashboard web sederhana untuk menyajikan informasi pelatihan kepada pimpinan. Aplikasi hanya memiliki dua fungsi utama:
+Dashboard web GIA Corpu/BPKP untuk menyajikan informasi pelatihan kepada pimpinan. Aplikasi hanya memiliki dua fungsi utama:
 
 1. **Upload data** dari Excel (`.xlsx`/`.xls`) atau CSV.
-2. **Dashboard** berisi KPI, grafik lokasi dan jenis pelatihan, highlight, filter, pencarian, tabel, pagination, serta detail setiap pelatihan.
+2. **Dashboard** berisi KPI, grafik lokasi dan jenis pelatihan, highlight, filter, pencarian, daftar lengkap dalam satu halaman, serta detail setiap pelatihan.
+
+
+## Perubahan versi 3
+
+- Palet antarmuka menggunakan nuansa biru-merah GIA Corpu/BPKP.
+- Kartu **Total Kelas Pelatihan** menampilkan jumlah seluruh kelas sebagai angka utama dan jumlah judul pelatihan sebagai angka pendamping.
+- Kartu **Kelas Akan Dilaksanakan** menampilkan total kelas yang akan dilaksanakan serta jumlah pelatihannya.
+- Kartu **Kelas Dalam Konfirmasi** dan **Kelas Dibatalkan** dihitung berdasarkan kolom **Jumlah Kelas**. Persentasenya juga menggunakan total kelas sebagai pembanding.
+- Panel **Highlight Pelatihan** memiliki tombol **Tambah/Edit Catatan**. Catatan manual disimpan pada `localStorage` browser.
+- Seluruh daftar pelatihan yang sesuai filter ditampilkan sekaligus tanpa pagination.
+- Tabel diurutkan otomatis berdasarkan status **Akan Dilaksanakan → Dalam Konfirmasi → Dibatalkan**, kemudian **Tanggal Mulai** paling awal, lalu **Kode** terkecil dengan pengurutan angka alami.
 
 ## Teknologi
 
@@ -14,7 +25,7 @@ Dashboard web sederhana untuk menyajikan informasi pelatihan kepada pimpinan. Ap
 - Frontend: HTML, CSS, dan JavaScript murni
 - Grafik: SVG dan CSS, tanpa library grafik eksternal
 
-File yang diunggah diproses di memori dan tidak disimpan oleh server. Hasil normalisasi disimpan pada `localStorage` browser agar dashboard tetap tampil setelah halaman dimuat ulang.
+File yang diunggah diproses di memori dan tidak disimpan oleh server. Hasil normalisasi beserta catatan highlight disimpan pada `localStorage` browser agar dashboard tetap tampil setelah halaman dimuat ulang.
 
 ## Struktur proyek
 
@@ -113,7 +124,7 @@ python -m unittest discover -s tests -v
 
 - Warna, ukuran, dan layout: `static/styles.css`
 - Teks, menu, dan struktur dashboard: `static/index.html`
-- Perhitungan KPI, grafik, filter, dan tabel: `static/app.js`
+- Perhitungan KPI, grafik, filter, catatan highlight, dan tabel: `static/app.js`
 - Aturan pembacaan Excel/CSV: `app.py`
 
 ## Catatan deployment
