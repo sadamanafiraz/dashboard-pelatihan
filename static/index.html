@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#045a46">
+  <meta name="description" content="Dashboard informasi pelatihan minggu depan dengan fitur unggah Excel dan CSV.">
+  <title>Dashboard Pelatihan Minggu Depan</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <svg class="svg-sprite" aria-hidden="true">
+    <symbol id="icon-dashboard" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="5" rx="2"></rect><rect x="14" y="12" width="7" height="9" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect>
+    </symbol>
+    <symbol id="icon-upload" viewBox="0 0 24 24">
+      <path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M5 20h14a2 2 0 0 0 2-2v-3"></path><path d="M3 15v3a2 2 0 0 0 2 2"></path>
+    </symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M16 3v4M8 3v4M3 10h18"></path>
+    </symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24">
+      <path d="M20 6v5h-5"></path><path d="M4 18v-5h5"></path><path d="M18.2 9A7 7 0 0 0 6.4 6.4L4 11"></path><path d="M5.8 15A7 7 0 0 0 17.6 17.6L20 13"></path>
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16.5 8.5"></path>
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path>
+    </symbol>
+    <symbol id="icon-x-circle" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"></circle><path d="m9 9 6 6M15 9l-6 6"></path>
+    </symbol>
+    <symbol id="icon-pin" viewBox="0 0 24 24">
+      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle>
+    </symbol>
+    <symbol id="icon-layers" viewBox="0 0 24 24">
+      <path d="m12 3 9 5-9 5-9-5 9-5Z"></path><path d="m3 12 9 5 9-5"></path><path d="m3 16 9 5 9-5"></path>
+    </symbol>
+    <symbol id="icon-star" viewBox="0 0 24 24">
+      <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"></path>
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path>
+    </symbol>
+    <symbol id="icon-filter" viewBox="0 0 24 24">
+      <path d="M4 5h16M7 12h10M10 19h4"></path>
+    </symbol>
+    <symbol id="icon-chevron" viewBox="0 0 24 24">
+      <path d="m9 6 6 6-6 6"></path>
+    </symbol>
+    <symbol id="icon-file" viewBox="0 0 24 24">
+      <path d="M6 3h8l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"></path><path d="M14 3v5h5M8 13h8M8 17h6"></path>
+    </symbol>
+    <symbol id="icon-info" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7h.01"></path>
+    </symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24">
+      <path d="M4 7h16M4 12h16M4 17h16"></path>
+    </symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24">
+      <path d="m6 6 12 12M18 6 6 18"></path>
+    </symbol>
+    <symbol id="icon-database" viewBox="0 0 24 24">
+      <ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path>
+    </symbol>
+  </svg>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M24 3 41 10v11c0 11-6.8 19.4-17 24C13.8 40.4 7 32 7 21V10L24 3Z"></path><path d="M17 24.5 22 29l10-11"></path></svg>
+        </div>
+        <div>
+          <strong>Pelatihan</strong>
+          <span>Dashboard Informasi</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" type="button" data-action="dashboard">
+          <svg class="icon"><use href="#icon-dashboard"></use></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" type="button" data-action="upload">
+          <svg class="icon"><use href="#icon-upload"></use></svg>
+          <span>Upload Data</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-note">
+        <div class="sidebar-note-title">
+          <svg class="icon"><use href="#icon-info"></use></svg>
+          <span>Informasi</span>
+        </div>
+        <p>Unggah data Excel atau CSV, lalu dashboard menyajikan ringkasan pelatihan dan status pembatalannya.</p>
+      </div>
+    </aside>
+
+    <div class="mobile-backdrop" id="mobileBackdrop" hidden></div>
+
+    <main class="main-content">
+      <header class="page-header">
+        <div class="page-title-wrap">
+          <button class="icon-button menu-button" id="menuButton" type="button" aria-label="Buka menu">
+            <svg class="icon"><use href="#icon-menu"></use></svg>
+          </button>
+          <div class="page-title-icon">
+            <svg class="icon"><use href="#icon-calendar"></use></svg>
+          </div>
+          <div>
+            <h1>Pelatihan Minggu Depan</h1>
+            <p>Informasi pelatihan yang akan dilaksanakan dan dibatalkan.</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <label class="header-control period-control">
+            <span class="header-control-icon"><svg class="icon"><use href="#icon-calendar"></use></svg></span>
+            <span class="header-control-copy">
+              <span class="control-label">Periode</span>
+              <select id="periodPreset" aria-label="Pilih periode dashboard">
+                <option value="data">Rentang data</option>
+                <option value="current-week">Minggu ini</option>
+                <option value="next-week">Minggu depan</option>
+                <option value="all">Semua data</option>
+                <option value="custom">Tanggal khusus</option>
+              </select>
+              <span class="control-value" id="periodLabel">Belum ada data</span>
+            </span>
+          </label>
+
+          <div class="header-control updated-control">
+            <span class="header-control-icon"><svg class="icon"><use href="#icon-refresh"></use></svg></span>
+            <span class="header-control-copy">
+              <span class="control-label">Terakhir diperbarui</span>
+              <strong class="control-value" id="lastUpdated">Belum ada data</strong>
+            </span>
+          </div>
+
+          <button class="primary-button compact" id="changeDataButton" type="button">
+            <svg class="icon"><use href="#icon-upload"></use></svg>
+            <span>Ganti Data</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="custom-period-panel" id="customPeriodPanel" hidden aria-label="Rentang tanggal khusus">
+        <label>
+          <span>Dari tanggal</span>
+          <input type="date" id="customStartDate">
+        </label>
+        <label>
+          <span>Sampai tanggal</span>
+          <input type="date" id="customEndDate">
+        </label>
+        <button class="secondary-button" id="applyCustomPeriod" type="button">Terapkan</button>
+      </section>
+
+      <section class="kpi-grid" aria-label="Ringkasan pelatihan">
+        <article class="kpi-card kpi-total">
+          <div class="kpi-icon"><svg class="icon"><use href="#icon-calendar"></use></svg></div>
+          <div class="kpi-copy">
+            <strong class="kpi-value" id="kpiTotal">0</strong>
+            <span class="kpi-label">Total Pelatihan</span>
+            <small id="kpiTotalHint">Pada periode terpilih</small>
+          </div>
+        </article>
+
+        <article class="kpi-card kpi-scheduled">
+          <div class="kpi-icon"><svg class="icon"><use href="#icon-check"></use></svg></div>
+          <div class="kpi-copy">
+            <strong class="kpi-value" id="kpiScheduled">0</strong>
+            <span class="kpi-label">Akan Dilaksanakan</span>
+            <div class="kpi-progress"><span id="scheduledProgress"></span></div>
+          </div>
+          <span class="kpi-percent" id="scheduledPercent">0%</span>
+        </article>
+
+        <article class="kpi-card kpi-confirmation">
+          <div class="kpi-icon"><svg class="icon"><use href="#icon-clock"></use></svg></div>
+          <div class="kpi-copy">
+            <strong class="kpi-value" id="kpiConfirmation">0</strong>
+            <span class="kpi-label">Dalam Konfirmasi</span>
+            <div class="kpi-progress"><span id="confirmationProgress"></span></div>
+          </div>
+          <span class="kpi-percent" id="confirmationPercent">0%</span>
+        </article>
+
+        <article class="kpi-card kpi-cancelled">
+          <div class="kpi-icon"><svg class="icon"><use href="#icon-x-circle"></use></svg></div>
+          <div class="kpi-copy">
+            <strong class="kpi-value" id="kpiCancelled">0</strong>
+            <span class="kpi-label">Dibatalkan</span>
+            <div class="kpi-progress"><span id="cancelledProgress"></span></div>
+          </div>
+          <span class="kpi-percent" id="cancelledPercent">0%</span>
+        </article>
+      </section>
+
+      <section class="analytics-grid" aria-label="Analisis pelatihan">
+        <article class="panel location-panel">
+          <div class="panel-heading">
+            <div>
+              <svg class="icon"><use href="#icon-pin"></use></svg>
+              <h2>Pelatihan per Lokasi</h2>
+            </div>
+          </div>
+          <div class="donut-layout">
+            <div class="donut-wrap" id="locationDonut" aria-label="Diagram pelatihan per lokasi">
+              <svg viewBox="0 0 160 160" role="img">
+                <circle class="donut-track" cx="80" cy="80" r="56"></circle>
+                <g id="donutSegments"></g>
+              </svg>
+              <div class="donut-center">
+                <strong id="donutTotal">0</strong>
+                <span>Total</span>
+              </div>
+            </div>
+            <div class="legend" id="locationLegend"></div>
+          </div>
+        </article>
+
+        <article class="panel type-panel">
+          <div class="panel-heading">
+            <div>
+              <svg class="icon"><use href="#icon-layers"></use></svg>
+              <h2>Pelatihan per Jenis</h2>
+            </div>
+          </div>
+          <div class="bar-chart" id="typeBars"></div>
+        </article>
+
+        <article class="panel highlight-panel">
+          <div class="panel-heading highlight-heading">
+            <div>
+              <svg class="icon filled"><use href="#icon-star"></use></svg>
+              <h2>Highlight Pelatihan</h2>
+            </div>
+          </div>
+          <div class="highlight-list">
+            <div class="highlight-item">
+              <div class="highlight-icon"><svg class="icon"><use href="#icon-calendar"></use></svg></div>
+              <div>
+                <strong>Jenis Terbanyak</strong>
+                <p id="highlightType">Belum ada data.</p>
+              </div>
+            </div>
+            <div class="highlight-divider"></div>
+            <div class="highlight-item">
+              <div class="highlight-icon"><svg class="icon"><use href="#icon-pin"></use></svg></div>
+              <div>
+                <strong>Lokasi Terbanyak</strong>
+                <p id="highlightLocation">Belum ada data.</p>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel table-panel" aria-label="Daftar pelatihan">
+        <div class="table-toolbar">
+          <div>
+            <h2>Daftar Pelatihan</h2>
+            <p id="datasetLabel">Belum ada file yang diunggah.</p>
+          </div>
+          <div class="table-filters">
+            <label class="filter-control">
+              <svg class="icon"><use href="#icon-filter"></use></svg>
+              <select id="statusFilter" aria-label="Filter status">
+                <option value="all">Semua Status</option>
+                <option value="Akan Dilaksanakan">Akan Dilaksanakan</option>
+                <option value="Dalam Konfirmasi">Dalam Konfirmasi</option>
+                <option value="Dibatalkan">Dibatalkan</option>
+              </select>
+            </label>
+            <label class="filter-control">
+              <svg class="icon"><use href="#icon-pin"></use></svg>
+              <select id="locationFilter" aria-label="Filter lokasi">
+                <option value="all">Semua Lokasi</option>
+              </select>
+            </label>
+            <label class="search-control">
+              <input type="search" id="searchInput" placeholder="Cari kode, judul, lokasi..." autocomplete="off">
+              <svg class="icon"><use href="#icon-search"></use></svg>
+            </label>
+          </div>
+        </div>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Kode</th>
+                <th>Status</th>
+                <th>Jenis Pelatihan</th>
+                <th>Pembiayaan</th>
+                <th>Lokasi</th>
+                <th class="center-cell">Jumlah Kelas</th>
+                <th>Judul Pelatihan</th>
+                <th>Tanggal Mulai</th>
+                <th>Akhir TM</th>
+                <th><span class="sr-only">Detail</span></th>
+              </tr>
+            </thead>
+            <tbody id="trainingTableBody"></tbody>
+          </table>
+          <div class="empty-table" id="emptyTable" hidden>
+            <div class="empty-icon"><svg class="icon"><use href="#icon-database"></use></svg></div>
+            <strong>Data tidak ditemukan</strong>
+            <p>Unggah file atau ubah filter untuk menampilkan data pelatihan.</p>
+          </div>
+        </div>
+
+        <div class="table-footer">
+          <span id="paginationInfo">Menampilkan 0 data</span>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="uploadModal" hidden>
+    <div class="modal-backdrop" data-close-upload></div>
+    <section class="modal-dialog upload-dialog" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+      <button class="modal-close" id="uploadCloseButton" type="button" aria-label="Tutup dialog">
+        <svg class="icon"><use href="#icon-close"></use></svg>
+      </button>
+      <div class="modal-heading">
+        <div class="modal-heading-icon"><svg class="icon"><use href="#icon-upload"></use></svg></div>
+        <div>
+          <h2 id="uploadTitle">Upload Data Pelatihan</h2>
+          <p>File diproses menjadi dashboard tanpa perlu mengubah format tampilan Excel Anda.</p>
+        </div>
+      </div>
+
+      <label class="dropzone" id="dropzone" for="fileInput">
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+        <div class="dropzone-icon"><svg class="icon"><use href="#icon-file"></use></svg></div>
+        <strong>Tarik file ke sini atau klik untuk memilih</strong>
+        <span>Format: XLSX, XLS, atau CSV. Maksimal 4 MB pada Vercel.</span>
+        <span class="selected-file" id="selectedFileName"></span>
+      </label>
+
+      <div class="upload-progress" id="uploadProgress" hidden>
+        <span></span>
+      </div>
+      <p class="upload-message" id="uploadMessage" aria-live="polite"></p>
+
+      <div class="column-guide">
+        <h3>Kolom yang dikenali</h3>
+        <div class="column-chips">
+          <span>Kode</span><span>Status</span><span>Jenis Pelatihan</span><span>Pembiayaan</span><span>Lokasi</span><span>Jumlah Kelas</span><span>Judul Pelatihan*</span><span>Tanggal Mulai*</span><span>Akhir TM</span>
+        </div>
+        <small>* Kolom wajib. Status berisi kata “batal” otomatis dikelompokkan sebagai Dibatalkan.</small>
+      </div>
+
+      <div class="modal-actions">
+        <button class="text-button danger-text" id="clearDataButton" type="button">Hapus data tersimpan</button>
+        <div>
+          <button class="secondary-button" id="demoDataButton" type="button">Gunakan data contoh</button>
+          <button class="primary-button" id="chooseFileButton" type="button">
+            <svg class="icon"><use href="#icon-upload"></use></svg>
+            Pilih File
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal" id="detailModal" hidden>
+    <div class="modal-backdrop" data-close-detail></div>
+    <section class="modal-dialog detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+      <button class="modal-close" id="detailCloseButton" type="button" aria-label="Tutup detail">
+        <svg class="icon"><use href="#icon-close"></use></svg>
+      </button>
+      <div class="detail-header">
+        <span class="status-badge" id="detailStatus">-</span>
+        <h2 id="detailTitle">Detail Pelatihan</h2>
+        <p id="detailSubtitle"></p>
+      </div>
+      <dl class="detail-grid" id="detailGrid"></dl>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
