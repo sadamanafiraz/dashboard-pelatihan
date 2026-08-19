@@ -1,8 +1,12 @@
 "use strict";
 
 const STORAGE_KEY = "dashboard-pelatihan-v1";
-const PAGE_SIZE = 7;
-const LOCATION_COLORS = ["#045b47", "#28ad65", "#f1b31c", "#3978d4", "#7557c8", "#e05a50"];
+const LOCATION_COLORS = ["#0b2f6b", "#1f63b5", "#d71920", "#ec5b62", "#6689ca", "#9fb4dc"];
+const STATUS_SORT_ORDER = Object.freeze({
+  "Akan Dilaksanakan": 0,
+  "Dalam Konfirmasi": 1,
+  "Dibatalkan": 2
+});
 
 const DEMO_ROWS = [
   {
@@ -137,8 +141,7 @@ const state = {
   statusFilter: "all",
   locationFilter: "all",
   search: "",
-  page: 1,
-  pageSize: PAGE_SIZE
+  highlightNote: ""
 };
 
 const elements = {};
@@ -148,14 +151,17 @@ function cacheElements() {
   const ids = [
     "sidebar", "mobileBackdrop", "menuButton", "periodPreset", "periodLabel",
     "lastUpdated", "changeDataButton", "customPeriodPanel", "customStartDate",
-    "customEndDate", "applyCustomPeriod", "kpiTotal", "kpiScheduled",
-    "kpiConfirmation", "kpiCancelled", "scheduledProgress", "confirmationProgress",
-    "cancelledProgress", "scheduledPercent", "confirmationPercent", "cancelledPercent",
+    "customEndDate", "applyCustomPeriod", "kpiTotal", "kpiTotalTrainingCount", "kpiScheduled",
+    "kpiScheduledTrainingCount", "kpiConfirmation", "kpiCancelled",
+    "confirmationProgress", "cancelledProgress", "confirmationPercent", "cancelledPercent",
     "donutSegments", "donutTotal", "locationLegend", "typeBars", "highlightType",
-    "highlightLocation", "datasetLabel", "statusFilter", "locationFilter", "searchInput",
-    "trainingTableBody", "emptyTable", "paginationInfo", "pagination", "uploadModal",
-    "uploadCloseButton", "dropzone", "fileInput", "selectedFileName", "uploadProgress",
-    "uploadMessage", "clearDataButton", "demoDataButton", "chooseFileButton", "detailModal",
+    "highlightLocation", "highlightEditButton", "highlightCustomText", "customHighlightItem",
+    "customHighlightDivider", "datasetLabel", "statusFilter", "locationFilter", "searchInput",
+    "trainingTableBody", "emptyTable", "paginationInfo", "uploadModal", "uploadCloseButton",
+    "dropzone", "fileInput", "selectedFileName", "uploadProgress", "uploadMessage",
+    "clearDataButton", "demoDataButton", "chooseFileButton", "highlightModal",
+    "highlightCloseButton", "highlightTextInput", "highlightCharacterCount",
+    "clearHighlightButton", "cancelHighlightButton", "saveHighlightButton", "detailModal",
     "detailCloseButton", "detailStatus", "detailTitle", "detailSubtitle", "detailGrid", "toast"
   ];
 
@@ -267,22 +273,63 @@ function getPeriodRows() {
   });
 }
 
+function getClassCount(row) {
+  const classCount = Number(row?.jumlah_kelas);
+  return Number.isFinite(classCount) && classCount > 0 ? classCount : 1;
+}
+
+function sumClasses(rows) {
+  return rows.reduce((sum, row) => sum + getClassCount(row), 0);
+}
+
+function compareTrainingRows(a, b) {
+  const statusA = STATUS_SORT_ORDER[a.status_kategori] ?? Number.MAX_SAFE_INTEGER;
+  const statusB = STATUS_SORT_ORDER[b.status_kategori] ?? Number.MAX_SAFE_INTEGER;
+  if (statusA !== statusB) return statusA - statusB;
+
+  const dateA = parseDateOnly(a.tanggal_mulai);
+  const dateB = parseDateOnly(b.tanggal_mulai);
+  if (dateA && dateB) {
+    const dateDifference = dateA.getTime() - dateB.getTime();
+    if (dateDifference !== 0) return dateDifference;
+  } else if (dateA) {
+    return -1;
+  } else if (dateB) {
+    return 1;
+  }
+
+  const codeDifference = String(a.kode ?? "").localeCompare(
+    String(b.kode ?? ""),
+    "id-ID",
+    { numeric: true, sensitivity: "base" }
+  );
+  if (codeDifference !== 0) return codeDifference;
+
+  return String(a.judul_pelatihan ?? "").localeCompare(
+    String(b.judul_pelatihan ?? ""),
+    "id-ID",
+    { sensitivity: "base" }
+  );
+}
+
 function getFilteredRows() {
   const query = state.search.trim().toLocaleLowerCase("id-ID");
-  return getPeriodRows().filter((row) => {
-    const statusMatch = state.statusFilter === "all" || row.status_kategori === state.statusFilter;
-    const locationMatch = state.locationFilter === "all" || row.lokasi === state.locationFilter;
-    const searchText = [
-      row.kode,
-      row.status_kategori,
-      row.status_asli,
-      row.jenis_pelatihan,
-      row.pembiayaan,
-      row.lokasi,
-      row.judul_pelatihan
-    ].join(" ").toLocaleLowerCase("id-ID");
-    return statusMatch && locationMatch && (!query || searchText.includes(query));
-  });
+  return getPeriodRows()
+    .filter((row) => {
+      const statusMatch = state.statusFilter === "all" || row.status_kategori === state.statusFilter;
+      const locationMatch = state.locationFilter === "all" || row.lokasi === state.locationFilter;
+      const searchText = [
+        row.kode,
+        row.status_kategori,
+        row.status_asli,
+        row.jenis_pelatihan,
+        row.pembiayaan,
+        row.lokasi,
+        row.judul_pelatihan
+      ].join(" ").toLocaleLowerCase("id-ID");
+      return statusMatch && locationMatch && (!query || searchText.includes(query));
+    })
+    .sort(compareTrainingRows);
 }
 
 function percentage(value, total) {
@@ -349,25 +396,29 @@ function renderHeader() {
 
 function renderKpis() {
   const rows = getPeriodRows();
-  const total = rows.length;
-  const scheduled = rows.filter((row) => row.status_kategori === "Akan Dilaksanakan").length;
-  const confirmation = rows.filter((row) => row.status_kategori === "Dalam Konfirmasi").length;
-  const cancelled = rows.filter((row) => row.status_kategori === "Dibatalkan").length;
+  const totalTrainingCount = rows.length;
+  const totalClasses = sumClasses(rows);
+  const scheduledRows = rows.filter((row) => row.status_kategori === "Akan Dilaksanakan");
+  const confirmationRows = rows.filter((row) => row.status_kategori === "Dalam Konfirmasi");
+  const cancelledRows = rows.filter((row) => row.status_kategori === "Dibatalkan");
 
-  const scheduledPct = percentage(scheduled, total);
-  const confirmationPct = percentage(confirmation, total);
-  const cancelledPct = percentage(cancelled, total);
+  const scheduledTrainingCount = scheduledRows.length;
+  const scheduledClasses = sumClasses(scheduledRows);
+  const confirmationClasses = sumClasses(confirmationRows);
+  const cancelledClasses = sumClasses(cancelledRows);
 
-  elements.kpiTotal.textContent = String(total);
-  elements.kpiScheduled.textContent = String(scheduled);
-  elements.kpiConfirmation.textContent = String(confirmation);
-  elements.kpiCancelled.textContent = String(cancelled);
+  const confirmationPct = percentage(confirmationClasses, totalClasses);
+  const cancelledPct = percentage(cancelledClasses, totalClasses);
 
-  elements.scheduledPercent.textContent = `${scheduledPct}%`;
+  elements.kpiTotal.textContent = String(totalClasses);
+  elements.kpiTotalTrainingCount.textContent = String(totalTrainingCount);
+  elements.kpiScheduled.textContent = String(scheduledClasses);
+  elements.kpiScheduledTrainingCount.textContent = String(scheduledTrainingCount);
+  elements.kpiConfirmation.textContent = String(confirmationClasses);
+  elements.kpiCancelled.textContent = String(cancelledClasses);
+
   elements.confirmationPercent.textContent = `${confirmationPct}%`;
   elements.cancelledPercent.textContent = `${cancelledPct}%`;
-
-  elements.scheduledProgress.style.width = `${scheduledPct}%`;
   elements.confirmationProgress.style.width = `${confirmationPct}%`;
   elements.cancelledProgress.style.width = `${cancelledPct}%`;
 }
@@ -442,13 +493,23 @@ function renderHighlights() {
   if (!rows.length) {
     elements.highlightType.textContent = "Belum ada data pada periode yang dipilih.";
     elements.highlightLocation.textContent = "Belum ada data pada periode yang dipilih.";
-    return;
+  } else {
+    const topType = types[0];
+    const topLocation = locations[0];
+    elements.highlightType.textContent = `Jenis ${topType.label} mendominasi dengan ${topType.value} sesi pelatihan.`;
+    elements.highlightLocation.textContent = `${topLocation.label} menjadi lokasi terbanyak dengan ${topLocation.value} sesi.`;
   }
 
-  const topType = types[0];
-  const topLocation = locations[0];
-  elements.highlightType.textContent = `Jenis ${topType.label} mendominasi dengan ${topType.value} sesi pelatihan.`;
-  elements.highlightLocation.textContent = `${topLocation.label} menjadi lokasi terbanyak dengan ${topLocation.value} sesi.`;
+  const hasCustomNote = Boolean(state.highlightNote.trim());
+  elements.customHighlightItem.hidden = !hasCustomNote;
+  elements.customHighlightDivider.hidden = !hasCustomNote;
+  elements.highlightCustomText.textContent = hasCustomNote ? state.highlightNote : "";
+  const buttonLabel = elements.highlightEditButton.querySelector("span");
+  if (buttonLabel) buttonLabel.textContent = hasCustomNote ? "Edit Catatan" : "Tambah Catatan";
+  elements.highlightEditButton.setAttribute(
+    "aria-label",
+    hasCustomNote ? "Edit catatan tambahan highlight" : "Tambah catatan highlight"
+  );
 }
 
 function statusClass(status) {
@@ -480,15 +541,11 @@ function renderLocationFilterOptions() {
 
 function renderTable() {
   const rows = getFilteredRows();
-  const totalPages = Math.max(1, Math.ceil(rows.length / state.pageSize));
-  state.page = Math.min(Math.max(state.page, 1), totalPages);
-  const startIndex = (state.page - 1) * state.pageSize;
-  const pageRows = rows.slice(startIndex, startIndex + state.pageSize);
 
-  elements.table.hidden = pageRows.length === 0;
-  elements.emptyTable.hidden = pageRows.length !== 0;
+  elements.table.hidden = rows.length === 0;
+  elements.emptyTable.hidden = rows.length !== 0;
 
-  elements.trainingTableBody.innerHTML = pageRows.map((row) => `
+  elements.trainingTableBody.innerHTML = rows.map((row) => `
     <tr class="${rowClass(row.status_kategori)}">
       <td>${escapeHtml(row.kode)}</td>
       <td><span class="status-badge ${statusClass(row.status_kategori)}">${escapeHtml(row.status_kategori)}</span></td>
@@ -507,40 +564,10 @@ function renderTable() {
     </tr>
   `).join("");
 
-  if (!rows.length) {
-    elements.paginationInfo.textContent = "Menampilkan 0 data";
-  } else {
-    const from = startIndex + 1;
-    const to = Math.min(startIndex + state.pageSize, rows.length);
-    elements.paginationInfo.textContent = `Menampilkan ${from}–${to} dari ${rows.length} pelatihan`;
-  }
-
-  renderPagination(totalPages);
-}
-
-function paginationRange(current, total) {
-  if (total <= 5) return Array.from({ length: total }, (_, index) => index + 1);
-  const pages = new Set([1, total, current - 1, current, current + 1]);
-  return [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
-}
-
-function renderPagination(totalPages) {
-  const pages = paginationRange(state.page, totalPages);
-  const parts = [
-    `<button type="button" data-page="${state.page - 1}" ${state.page <= 1 ? "disabled" : ""} aria-label="Halaman sebelumnya">‹</button>`
-  ];
-
-  let previous = 0;
-  pages.forEach((page) => {
-    if (previous && page - previous > 1) {
-      parts.push('<span aria-hidden="true">…</span>');
-    }
-    parts.push(`<button type="button" data-page="${page}" class="${page === state.page ? "active" : ""}" aria-label="Halaman ${page}">${page}</button>`);
-    previous = page;
-  });
-
-  parts.push(`<button type="button" data-page="${state.page + 1}" ${state.page >= totalPages ? "disabled" : ""} aria-label="Halaman berikutnya">›</button>`);
-  elements.pagination.innerHTML = parts.join("");
+  const visibleClasses = sumClasses(rows);
+  elements.paginationInfo.textContent = rows.length
+    ? `Menampilkan seluruh ${rows.length} judul pelatihan • ${visibleClasses} kelas`
+    : "Menampilkan 0 data";
 }
 
 function renderAll() {
@@ -554,7 +581,7 @@ function renderAll() {
   elements.statusFilter.value = state.statusFilter;
   elements.searchInput.value = state.search;
   renderTable();
-  elements.clearDataButton.disabled = !state.rows.length;
+  elements.clearDataButton.disabled = !state.rows.length && !state.highlightNote;
 }
 
 function escapeHtml(value) {
@@ -591,7 +618,11 @@ function normalizeIncomingRows(rows) {
 
 function saveToStorage() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows: state.rows, meta: state.meta }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      rows: state.rows,
+      meta: state.meta,
+      highlightNote: state.highlightNote
+    }));
   } catch (error) {
     showToast("Data berhasil dimuat, tetapi terlalu besar untuk disimpan di browser.", "error");
   }
@@ -602,6 +633,7 @@ function loadFromStorage() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     const parsed = JSON.parse(raw);
+    state.highlightNote = String(parsed.highlightNote || "").trim().slice(0, 500);
     const rows = normalizeIncomingRows(parsed.rows);
     if (!rows.length) return false;
     state.rows = rows;
@@ -614,6 +646,7 @@ function loadFromStorage() {
     return true;
   } catch (error) {
     localStorage.removeItem(STORAGE_KEY);
+    state.highlightNote = "";
     return false;
   }
 }
@@ -636,7 +669,6 @@ function applyDataset(payload, fallbackName = "Data pelatihan") {
   state.statusFilter = "all";
   state.locationFilter = "all";
   state.search = "";
-  state.page = 1;
   saveToStorage();
   renderAll();
 }
@@ -650,6 +682,45 @@ function showUploadModal() {
 function closeUploadModal() {
   elements.uploadModal.hidden = true;
   document.body.style.overflow = "";
+}
+
+function updateHighlightCharacterCount() {
+  elements.highlightCharacterCount.textContent = String(elements.highlightTextInput.value.length);
+}
+
+function showHighlightModal() {
+  elements.highlightTextInput.value = state.highlightNote;
+  updateHighlightCharacterCount();
+  elements.clearHighlightButton.disabled = !state.highlightNote;
+  elements.highlightModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  window.setTimeout(() => elements.highlightTextInput.focus(), 80);
+}
+
+function closeHighlightModal() {
+  elements.highlightModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function saveHighlightNote() {
+  state.highlightNote = elements.highlightTextInput.value.trim().slice(0, 500);
+  saveToStorage();
+  renderAll();
+  closeHighlightModal();
+  showToast(state.highlightNote ? "Catatan highlight berhasil disimpan." : "Catatan highlight dikosongkan.");
+}
+
+function clearHighlightNote() {
+  if (!state.highlightNote && !elements.highlightTextInput.value.trim()) return;
+  const confirmed = window.confirm("Hapus catatan tambahan pada highlight?");
+  if (!confirmed) return;
+  state.highlightNote = "";
+  elements.highlightTextInput.value = "";
+  updateHighlightCharacterCount();
+  saveToStorage();
+  renderAll();
+  closeHighlightModal();
+  showToast("Catatan highlight sudah dihapus.");
 }
 
 function showDetailModal(row) {
@@ -753,8 +824,8 @@ function useDemoData() {
 }
 
 function clearStoredData() {
-  if (!state.rows.length) return;
-  const confirmed = window.confirm("Hapus data dashboard yang tersimpan di browser ini?");
+  if (!state.rows.length && !state.highlightNote) return;
+  const confirmed = window.confirm("Hapus data dashboard dan catatan tambahan yang tersimpan di browser ini?");
   if (!confirmed) return;
 
   localStorage.removeItem(STORAGE_KEY);
@@ -766,9 +837,9 @@ function clearStoredData() {
   state.statusFilter = "all";
   state.locationFilter = "all";
   state.search = "";
-  state.page = 1;
+  state.highlightNote = "";
   renderAll();
-  setUploadState({ message: "Data tersimpan sudah dihapus.", type: "success" });
+  setUploadState({ message: "Data dan catatan tersimpan sudah dihapus.", type: "success" });
 }
 
 function showToast(message, type = "success") {
@@ -819,7 +890,6 @@ function attachEvents() {
   elements.periodPreset.addEventListener("change", (event) => {
     state.periodPreset = event.target.value;
     if (state.periodPreset === "custom") initializeCustomDates();
-    state.page = 1;
     renderAll();
   });
 
@@ -836,32 +906,21 @@ function attachEvents() {
     }
     state.customStart = start;
     state.customEnd = end;
-    state.page = 1;
     renderAll();
   });
 
   elements.statusFilter.addEventListener("change", (event) => {
     state.statusFilter = event.target.value;
-    state.page = 1;
     renderTable();
   });
 
   elements.locationFilter.addEventListener("change", (event) => {
     state.locationFilter = event.target.value;
-    state.page = 1;
     renderTable();
   });
 
   elements.searchInput.addEventListener("input", (event) => {
     state.search = event.target.value;
-    state.page = 1;
-    renderTable();
-  });
-
-  elements.pagination.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-page]");
-    if (!button || button.disabled) return;
-    state.page = Number(button.dataset.page) || 1;
     renderTable();
   });
 
@@ -870,6 +929,16 @@ function attachEvents() {
     if (!button) return;
     const row = state.rows.find((item) => item.id === button.dataset.detailId);
     if (row) showDetailModal(row);
+  });
+
+  elements.highlightEditButton.addEventListener("click", showHighlightModal);
+  elements.highlightCloseButton.addEventListener("click", closeHighlightModal);
+  elements.cancelHighlightButton.addEventListener("click", closeHighlightModal);
+  elements.saveHighlightButton.addEventListener("click", saveHighlightNote);
+  elements.clearHighlightButton.addEventListener("click", clearHighlightNote);
+  elements.highlightTextInput.addEventListener("input", updateHighlightCharacterCount);
+  document.querySelectorAll("[data-close-highlight]").forEach((element) => {
+    element.addEventListener("click", closeHighlightModal);
   });
 
   elements.uploadCloseButton.addEventListener("click", closeUploadModal);
@@ -907,6 +976,7 @@ function attachEvents() {
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     if (!elements.detailModal.hidden) closeDetailModal();
+    else if (!elements.highlightModal.hidden) closeHighlightModal();
     else if (!elements.uploadModal.hidden) closeUploadModal();
     else closeMobileMenu();
   });

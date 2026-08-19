@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#045a46">
-  <meta name="description" content="Dashboard informasi pelatihan minggu depan dengan fitur unggah Excel dan CSV.">
+  <meta name="theme-color" content="#0b2f6b">
+  <meta name="description" content="Dashboard GIA Corpu BPKP untuk informasi pelatihan minggu depan dengan fitur unggah Excel dan CSV.">
   <title>Dashboard Pelatihan Minggu Depan</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
@@ -64,17 +64,24 @@
     <symbol id="icon-database" viewBox="0 0 24 24">
       <ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path>
     </symbol>
+    <symbol id="icon-edit" viewBox="0 0 24 24">
+      <path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path>
+    </symbol>
+    <symbol id="icon-note" viewBox="0 0 24 24">
+      <path d="M5 3h14a2 2 0 0 1 2 2v10l-6 6H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"></path><path d="M14 21v-5a1 1 0 0 1 1-1h6M7 8h10M7 12h7"></path>
+    </symbol>
   </svg>
 
   <div class="app-shell">
     <aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 48 48"><path d="M24 3 41 10v11c0 11-6.8 19.4-17 24C13.8 40.4 7 32 7 21V10L24 3Z"></path><path d="M17 24.5 22 29l10-11"></path></svg>
+          <span>GIA</span>
+          <i></i>
         </div>
         <div>
-          <strong>Pelatihan</strong>
-          <span>Dashboard Informasi</span>
+          <strong>GIA Corpu</strong>
+          <span>BPKP • Dashboard Pelatihan</span>
         </div>
       </div>
 
@@ -110,8 +117,9 @@
             <svg class="icon"><use href="#icon-calendar"></use></svg>
           </div>
           <div>
-            <h1>Pelatihan Mingguan</h1>
-            <p>Informasi pelatihan yang akan dilaksanakan dan Dibalikkan</p>
+            <span class="page-eyebrow">GIA CORPU • BPKP</span>
+            <h1>Pelatihan Minggu Depan</h1>
+            <p>Informasi pelatihan yang akan dilaksanakan dan dibatalkan.</p>
           </div>
         </div>
 
@@ -163,8 +171,8 @@
           <div class="kpi-icon"><svg class="icon"><use href="#icon-calendar"></use></svg></div>
           <div class="kpi-copy">
             <strong class="kpi-value" id="kpiTotal">0</strong>
-            <span class="kpi-label">Total Pelatihan</span>
-            <small id="kpiTotalHint">Pada periode terpilih</small>
+            <span class="kpi-label">Total Kelas Pelatihan</span>
+            <small class="kpi-submetric"><strong id="kpiTotalTrainingCount">0</strong> judul pelatihan</small>
           </div>
         </article>
 
@@ -172,17 +180,16 @@
           <div class="kpi-icon"><svg class="icon"><use href="#icon-check"></use></svg></div>
           <div class="kpi-copy">
             <strong class="kpi-value" id="kpiScheduled">0</strong>
-            <span class="kpi-label">Akan Dilaksanakan</span>
-            <div class="kpi-progress"><span id="scheduledProgress"></span></div>
+            <span class="kpi-label">Kelas Akan Dilaksanakan</span>
+            <small class="kpi-submetric"><strong id="kpiScheduledTrainingCount">0</strong> pelatihan akan dilaksanakan</small>
           </div>
-          <span class="kpi-percent" id="scheduledPercent">0%</span>
         </article>
 
         <article class="kpi-card kpi-confirmation">
           <div class="kpi-icon"><svg class="icon"><use href="#icon-clock"></use></svg></div>
           <div class="kpi-copy">
             <strong class="kpi-value" id="kpiConfirmation">0</strong>
-            <span class="kpi-label">Dalam Konfirmasi</span>
+            <span class="kpi-label">Kelas Dalam Konfirmasi</span>
             <div class="kpi-progress"><span id="confirmationProgress"></span></div>
           </div>
           <span class="kpi-percent" id="confirmationPercent">0%</span>
@@ -192,7 +199,7 @@
           <div class="kpi-icon"><svg class="icon"><use href="#icon-x-circle"></use></svg></div>
           <div class="kpi-copy">
             <strong class="kpi-value" id="kpiCancelled">0</strong>
-            <span class="kpi-label">Dibatalkan</span>
+            <span class="kpi-label">Kelas Dibatalkan</span>
             <div class="kpi-progress"><span id="cancelledProgress"></span></div>
           </div>
           <span class="kpi-percent" id="cancelledPercent">0%</span>
@@ -238,6 +245,10 @@
               <svg class="icon filled"><use href="#icon-star"></use></svg>
               <h2>Highlight Pelatihan</h2>
             </div>
+            <button class="highlight-edit-button" id="highlightEditButton" type="button">
+              <svg class="icon"><use href="#icon-edit"></use></svg>
+              <span>Tambah Catatan</span>
+            </button>
           </div>
           <div class="highlight-list">
             <div class="highlight-item">
@@ -253,6 +264,14 @@
               <div>
                 <strong>Lokasi Terbanyak</strong>
                 <p id="highlightLocation">Belum ada data.</p>
+              </div>
+            </div>
+            <div class="highlight-divider" id="customHighlightDivider" hidden></div>
+            <div class="highlight-item highlight-custom-item" id="customHighlightItem" hidden>
+              <div class="highlight-icon"><svg class="icon"><use href="#icon-note"></use></svg></div>
+              <div>
+                <strong>Catatan Tambahan</strong>
+                <p id="highlightCustomText"></p>
               </div>
             </div>
           </div>
@@ -315,7 +334,7 @@
 
         <div class="table-footer">
           <span id="paginationInfo">Menampilkan 0 data</span>
-          <div class="pagination" id="pagination"></div>
+          <span class="table-all-note">Seluruh hasil ditampilkan dan diurutkan otomatis: status, tanggal mulai, lalu kode.</span>
         </div>
       </section>
     </main>
@@ -364,6 +383,36 @@
             <svg class="icon"><use href="#icon-upload"></use></svg>
             Pilih File
           </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal" id="highlightModal" hidden>
+    <div class="modal-backdrop" data-close-highlight></div>
+    <section class="modal-dialog highlight-dialog" role="dialog" aria-modal="true" aria-labelledby="highlightModalTitle">
+      <button class="modal-close" id="highlightCloseButton" type="button" aria-label="Tutup dialog catatan">
+        <svg class="icon"><use href="#icon-close"></use></svg>
+      </button>
+      <div class="modal-heading">
+        <div class="modal-heading-icon note-heading-icon"><svg class="icon"><use href="#icon-note"></use></svg></div>
+        <div>
+          <h2 id="highlightModalTitle">Catatan Tambahan Highlight</h2>
+          <p>Masukkan informasi penting untuk pimpinan. Catatan tersimpan di browser yang sama.</p>
+        </div>
+      </div>
+
+      <label class="highlight-input-group" for="highlightTextInput">
+        <span>Isi catatan</span>
+        <textarea id="highlightTextInput" rows="6" maxlength="500" placeholder="Contoh: Perlu perhatian khusus untuk pelatihan yang melibatkan peserta eksternal..."></textarea>
+      </label>
+      <div class="highlight-input-meta"><span id="highlightCharacterCount">0</span>/500 karakter</div>
+
+      <div class="modal-actions highlight-modal-actions">
+        <button class="text-button danger-text" id="clearHighlightButton" type="button">Hapus catatan</button>
+        <div>
+          <button class="secondary-button" id="cancelHighlightButton" type="button">Batal</button>
+          <button class="primary-button" id="saveHighlightButton" type="button">Simpan Catatan</button>
         </div>
       </div>
     </section>
