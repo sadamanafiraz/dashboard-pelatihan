@@ -1,54 +1,49 @@
-# Memperbarui Dashboard di Vercel — Versi 3
+# Memperbarui Dashboard ke Versi NeonDB
 
-Versi ini berisi tiga penyesuaian lanjutan:
+## File yang berubah atau ditambahkan
 
-1. KPI **Total Kelas Pelatihan** menampilkan total kolom **Jumlah Kelas** sebagai angka utama dan jumlah judul pelatihan sebagai angka kecil.
-2. KPI **Kelas Dalam Konfirmasi** dan **Kelas Dibatalkan** menampilkan jumlah kelas, bukan hanya jumlah baris pelatihan. Persentase kedua kartu dihitung terhadap total kelas.
-3. Daftar pelatihan diurutkan otomatis dengan prioritas:
-   - **Akan Dilaksanakan**;
-   - **Dalam Konfirmasi**;
-   - **Dibatalkan**;
-   - di dalam status yang sama: **Tanggal Mulai** paling awal;
-   - jika tanggal sama: **Kode** terkecil.
-
-Kunci `localStorage` tetap sama, sehingga data upload dan catatan highlight pada browser Production yang sama tetap dapat digunakan setelah pembaruan.
-
-## Cara paling aman melalui GitHub
-
-1. Ekstrak paket patch versi 3.
-2. Salin file berikut ke repository lama dan pilih **Replace**:
-   - `static/index.html`
-   - `static/styles.css`
-   - `static/app.js`
-   - `app.py`
-   - `README.md`
-   - `UPDATE-VERCEL.md`
-3. Buat branch agar Vercel menghasilkan Preview Deployment:
-
-```bash
-git checkout -b pembaruan-dashboard-v3
-git add .
-git commit -m "Perbarui KPI kelas dan urutan tabel dashboard v3"
-git push -u origin pembaruan-dashboard-v3
+```text
+app.py
+database.py
+requirements.txt
+static/index.html
+static/styles.css
+static/app.js
+sql/001_init.sql
+.env.example
+README.md
+UPDATE-VERCEL.md
 ```
 
-4. Uji URL Preview dari Vercel:
-   - total kelas dan jumlah judul pelatihan;
-   - jumlah kelas pada status konfirmasi dan dibatalkan;
-   - urutan status, tanggal mulai, dan kode;
-   - upload, filter, pencarian, serta catatan highlight.
-5. Setelah hasilnya benar, merge branch ke `main`. Vercel akan memperbarui Production secara otomatis.
+## Urutan pembaruan
 
-## Cara langsung ke Production
+1. Cadangkan repository dan deployment Production saat ini.
+2. Jalankan `sql/001_init.sql` di Neon SQL Editor.
+3. Salin file versi NeonDB ke repository.
+4. Tambahkan `DATABASE_URL` dan `ADMIN_UPLOAD_KEY` di Vercel.
+5. Push ke branch baru agar Vercel membuat Preview Deployment.
+6. Buka `/api/health` pada URL Preview.
+7. Upload file master yang berisi seluruh minggu.
+8. Uji pilihan minggu, KPI, grafik, tabel, dan catatan highlight.
+9. Merge branch ke `main` setelah hasil benar.
 
-Setelah mengganti file pada repository lokal:
+## Perintah Git
 
 ```bash
+git checkout -b neon-dashboard
 git add .
-git commit -m "Perbarui KPI kelas dan urutan tabel dashboard v3"
+git commit -m "Hubungkan dashboard pelatihan ke NeonDB"
+git push -u origin neon-dashboard
+```
+
+Setelah Preview disetujui:
+
+```bash
+git checkout main
+git merge neon-dashboard
 git push origin main
 ```
 
-## Catatan pengurutan
+## Peringatan penting
 
-Tanggal Mulai diurutkan naik, sehingga tanggal yang lebih awal/terdekat pada periode terpilih tampil terlebih dahulu. Kode menggunakan pengurutan angka alami; sebagai contoh, kode `9` tampil sebelum `10`, bukan sesudahnya seperti pada pengurutan teks biasa.
+Endpoint upload menggunakan model **replace snapshot**. Setiap upload mengganti seluruh isi tabel `pelatihan`. Gunakan file master yang memuat semua minggu yang harus tersedia pada dashboard.
