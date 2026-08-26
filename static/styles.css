@@ -719,23 +719,28 @@ button:disabled {
 
 .donut-layout {
   display: grid;
-  grid-template-columns: minmax(160px, 0.9fr) minmax(135px, 1fr);
+  grid-template-columns: 184px minmax(0, 1fr);
   align-items: center;
-  gap: 16px;
+  gap: 22px;
   min-height: 205px;
+  padding: 6px 10px 4px 6px;
+  overflow: visible;
 }
 
 .donut-wrap {
   position: relative;
-  width: min(100%, 210px);
-  aspect-ratio: 1;
+  width: 176px;
+  height: 176px;
+  max-width: 100%;
   justify-self: center;
+  overflow: visible;
 }
 
 .donut-wrap svg {
+  display: block;
   width: 100%;
   height: 100%;
-  transform: rotate(-90deg);
+  overflow: visible;
 }
 
 .donut-track,
@@ -1882,7 +1887,7 @@ tbody tr.confirmation-row {
     margin: 0 3px;
   }
 
-  .donut-layout {
+ .donut-layout {
     grid-template-columns: 1fr;
   }
 
@@ -2059,4 +2064,17 @@ body.exporting-dashboard .modal,
 body.exporting-dashboard .toast,
 body.exporting-dashboard .mobile-backdrop {
   display: none !important;
+}
+
+body.exporting-dashboard .location-panel,
+body.exporting-dashboard .donut-layout,
+body.exporting-dashboard .donut-wrap,
+body.exporting-dashboard .donut-wrap svg {
+  overflow: visible !important;
+}
+
+body.exporting-dashboard .donut-wrap {
+  width: 176px !important;
+  height: 176px !important;
+  flex: 0 0 176px;
 }
