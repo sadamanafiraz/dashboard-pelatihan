@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
+import os
 import re
 import unicodedata
 from datetime import date, datetime, timedelta, timezone
@@ -8,9 +11,22 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
+
+from database import (
+    DatabaseNotConfigured,
+    DatabaseSchemaMissing,
+    delete_week_note,
+    fetch_trainings,
+    list_weeks,
+    ping_database,
+    replace_trainings,
+    save_week_note,
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -18,8 +34,8 @@ MAX_FILE_BYTES = 4 * 1024 * 1024
 ALLOWED_SUFFIXES = {".xlsx", ".xls", ".csv"}
 
 app = FastAPI(
-    title="Dashboard Pelatihan GIA Corpu",
-    version="3.0.0",
+    title="GIA Corpu Weekly Training",
+    version="5.0.0",
     docs_url="/api/docs",
     redoc_url=None,
 )
@@ -354,17 +370,171 @@ def dataframe_to_rows(
     return rows, warnings
 
 
+def make_record_key(row: dict[str, Any], position: int) -> str:
+    """Create a deterministic key for one row in the uploaded snapshot."""
+
+    parts = [
+        str(position),
+        str(row.get("kode", "")),
+        str(row.get("judul_pelatihan", "")),
+        str(row.get("tanggal_mulai", "")),
+        str(row.get("lokasi", "")),
+    ]
+    return hashlib.sha256("\x1f".join(parts).encode("utf-8")).hexdigest()
+
+
+def week_start_for(value: date) -> date:
+    return value - timedelta(days=value.weekday())
+
+
+def choose_default_week(rows: list[dict[str, Any]]) -> date | None:
+    if not rows:
+        return None
+
+    weeks = sorted(
+        {
+            week_start_for(date.fromisoformat(str(row["tanggal_mulai"])))
+            for row in rows
+        }
+    )
+    today = datetime.now(timezone.utc).date()
+    current_week = week_start_for(today)
+    next_week = current_week + timedelta(days=7)
+
+    if next_week in weeks:
+        return next_week
+    if current_week in weeks:
+        return current_week
+
+    future_weeks = [week for week in weeks if week > current_week]
+    return future_weeks[0] if future_weeks else weeks[-1]
+
+
+def upload_is_protected() -> bool:
+    return bool(os.getenv("ADMIN_UPLOAD_KEY", "").strip())
+
+
+def require_admin_key(
+    x_admin_key: str | None = Header(default=None, alias="X-Admin-Key"),
+) -> None:
+    expected = os.getenv("ADMIN_UPLOAD_KEY", "").strip()
+    if not expected:
+        return
+    supplied = (x_admin_key or "").strip()
+    if not supplied or not hmac.compare_digest(supplied, expected):
+        raise HTTPException(
+            status_code=401,
+            detail="Kunci admin tidak valid.",
+        )
+
+
+def raise_database_http_error(exc: Exception) -> None:
+    if isinstance(exc, DatabaseNotConfigured):
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if isinstance(exc, DatabaseSchemaMissing):
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    raise HTTPException(
+        status_code=503,
+        detail="NeonDB tidak dapat diakses. Periksa DATABASE_URL dan status database.",
+    ) from exc
+
+
+class WeekNotePayload(BaseModel):
+    note: str = Field(default="", max_length=500)
+
+
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/api/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> dict[str, Any]:
+    response: dict[str, Any] = {
+        "status": "ok",
+        "database_configured": bool(os.getenv("DATABASE_URL", "").strip()),
+        "upload_protected": upload_is_protected(),
+    }
+    try:
+        ping_database()
+        response["database"] = "connected"
+    except Exception as exc:  # Health endpoint must remain readable.
+        response["status"] = "degraded"
+        response["database"] = "unavailable"
+        response["detail"] = str(exc)
+    return response
 
 
-@app.post("/api/upload")
+@app.get("/api/weeks")
+def available_weeks() -> dict[str, Any]:
+    try:
+        weeks, meta = list_weeks()
+    except Exception as exc:
+        raise_database_http_error(exc)
+        raise AssertionError("unreachable")
+
+    return {
+        "weeks": weeks,
+        "meta": meta,
+        "upload_protected": upload_is_protected(),
+    }
+
+
+@app.get("/api/trainings")
+def training_data(
+    week_start: date | None = Query(default=None),
+) -> dict[str, Any]:
+    try:
+        rows, note, meta = fetch_trainings(week_start)
+    except Exception as exc:
+        raise_database_http_error(exc)
+        raise AssertionError("unreachable")
+
+    return {
+        "week_start": week_start,
+        "week_end": week_start + timedelta(days=6) if week_start else None,
+        "row_count": len(rows),
+        "class_count": sum(int(row.get("jumlah_kelas") or 1) for row in rows),
+        "rows": rows,
+        "note": note,
+        "meta": meta,
+        "upload_protected": upload_is_protected(),
+    }
+
+
+@app.put(
+    "/api/notes/{week_start}",
+    dependencies=[Depends(require_admin_key)],
+)
+def update_week_note(
+    week_start: date,
+    payload: WeekNotePayload,
+) -> dict[str, Any]:
+    try:
+        saved = save_week_note(week_start, payload.note)
+    except Exception as exc:
+        raise_database_http_error(exc)
+        raise AssertionError("unreachable")
+    return {"message": "Catatan berhasil disimpan.", "note": saved}
+
+
+@app.delete(
+    "/api/notes/{week_start}",
+    dependencies=[Depends(require_admin_key)],
+)
+def remove_week_note(week_start: date) -> dict[str, str]:
+    try:
+        delete_week_note(week_start)
+    except Exception as exc:
+        raise_database_http_error(exc)
+        raise AssertionError("unreachable")
+    return {"message": "Catatan berhasil dihapus."}
+
+
+@app.post(
+    "/api/upload",
+    dependencies=[Depends(require_admin_key)],
+)
 async def upload_training_data(file: UploadFile = File(...)) -> dict[str, Any]:
     filename = Path(file.filename or "data").name
     suffix = Path(filename).suffix.lower()
@@ -398,11 +568,36 @@ async def upload_training_data(file: UploadFile = File(...)) -> dict[str, Any]:
             detail=f"File tidak dapat diproses: {exc}",
         ) from exc
 
+    database_rows: list[dict[str, Any]] = []
+    for position, row in enumerate(rows, start=1):
+        database_rows.append(
+            {
+                **row,
+                "record_key": make_record_key(row, position),
+            }
+        )
+
+    uploaded_at = datetime.now(timezone.utc)
+    try:
+        await run_in_threadpool(
+            replace_trainings,
+            database_rows,
+            file_name=filename,
+            sheet_name=sheet_name,
+            uploaded_at=uploaded_at,
+        )
+    except Exception as exc:
+        raise_database_http_error(exc)
+        raise AssertionError("unreachable")
+
+    default_week = choose_default_week(rows)
     return {
+        "message": "Data berhasil disimpan ke NeonDB.",
         "file_name": filename,
         "sheet_name": sheet_name,
-        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "uploaded_at": uploaded_at,
         "row_count": len(rows),
+        "class_count": sum(int(row.get("jumlah_kelas") or 1) for row in rows),
+        "default_week": default_week,
         "warnings": warnings,
-        "rows": rows,
     }
