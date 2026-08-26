@@ -685,11 +685,20 @@ async function exportDashboardAsPng() {
     window.scrollTo(0, 0);
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-    // Hanya .main-content yang ditangkap, sehingga sidebar/toolbar kiri
-    // dan tombol Export PNG tidak masuk ke hasil file.
+    // Capture hanya area dashboard (.main-content), sehingga toolbar/sidebar kiri
+    // tidak menambah lebar maupun ikut masuk ke file PNG.
     const width = target.scrollWidth;
     const height = target.scrollHeight;
-    const scale = Math.min(2, Math.max(1.35, window.devicePixelRatio || 1));
+
+    // Export HD: target 3x agar teks dan garis tetap tajam saat PNG dibuka/di-zoom.
+    // Skala diturunkan otomatis hanya bila halaman sangat panjang agar browser tidak kehabisan memori.
+    await (document.fonts?.ready || Promise.resolve());
+    const desiredScale = 3;
+    const maxCanvasDimension = 30000;
+    const maxCanvasPixels = 120000000;
+    const dimensionScale = Math.min(maxCanvasDimension / width, maxCanvasDimension / height);
+    const pixelScale = Math.sqrt(maxCanvasPixels / Math.max(1, width * height));
+    const scale = Math.max(1.5, Math.min(desiredScale, dimensionScale, pixelScale));
 
     const canvas = await window.html2canvas(target, {
       backgroundColor: "#f3f6fb",
@@ -703,7 +712,8 @@ async function exportDashboardAsPng() {
       windowWidth: width,
       windowHeight: height,
       onclone: (clonedDocument) => {
-        clonedDocument.body.classList.add("exporting-dashboard");
+        const clonedBody = clonedDocument.body;
+        clonedBody.classList.add("exporting-dashboard");
         clonedDocument.querySelectorAll(".modal, .toast, .mobile-backdrop").forEach((node) => {
           node.style.display = "none";
         });
@@ -731,7 +741,7 @@ async function exportDashboardAsPng() {
     downloadLink.click();
     downloadLink.remove();
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-    showToast("Dashboard berhasil diekspor sebagai PNG tanpa toolbar.");
+    showToast(`Dashboard berhasil diekspor sebagai PNG HD (${scale.toFixed(1)}x) tanpa toolbar.`);
   } catch (error) {
     console.error(error);
     showToast("Export PNG gagal. Coba ulangi setelah halaman selesai dimuat.", "error");
