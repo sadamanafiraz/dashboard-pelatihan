@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b2f6b">
-  <meta name="description" content="Dashboard GIA Corpu BPKP untuk informasi pelatihan minggu depan dengan fitur unggah Excel dan CSV.">
-  <title>Dashboard Pelatihan Minggu Depan</title>
+  <meta name="description" content="Dashboard GIA Corpu BPKP dengan data pelatihan mingguan terpusat di NeonDB.">
+  <title>GIA Corpu Weekly Training</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
@@ -70,6 +70,9 @@
     <symbol id="icon-note" viewBox="0 0 24 24">
       <path d="M5 3h14a2 2 0 0 1 2 2v10l-6 6H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"></path><path d="M14 21v-5a1 1 0 0 1 1-1h6M7 8h10M7 12h7"></path>
     </symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24">
+      <path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14a2 2 0 0 0 2-2v-3"></path><path d="M3 16v3a2 2 0 0 0 2 2"></path>
+    </symbol>
   </svg>
 
   <div class="app-shell">
@@ -81,7 +84,7 @@
         </div>
         <div>
           <strong>GIA Corpu</strong>
-          <span>BPKP • Linimasa Pelatihan</span>
+          <span>BPKP • Dashboard Pelatihan</span>
         </div>
       </div>
 
@@ -94,6 +97,10 @@
           <svg class="icon"><use href="#icon-upload"></use></svg>
           <span>Upload Data</span>
         </button>
+        <button class="nav-item" id="exportPngButton" type="button" data-action="export" title="Unduh dashboard sebagai PNG">
+          <svg class="icon"><use href="#icon-download"></use></svg>
+          <span>Export PNG</span>
+        </button>
       </nav>
 
       <div class="sidebar-note">
@@ -101,7 +108,7 @@
           <svg class="icon"><use href="#icon-info"></use></svg>
           <span>Informasi</span>
         </div>
-        <p>Unggah data Excel atau CSV, lalu dashboard menyajikan ringkasan pelatihan dan status pelaksanaannya.</p>
+        <p>Unggah data Excel atau CSV, lalu dashboard menyajikan ringkasan pelatihan. Export PNG hanya menangkap area dashboard tanpa toolbar kiri. Grafik lokasi dan jenis menghitung jumlah kelas.</p>
       </div>
     </aside>
 
@@ -118,8 +125,8 @@
           </div>
           <div>
             <span class="page-eyebrow">GIA CORPU • BPKP</span>
-            <h1>Pelatihan Minggu Depan</h1>
-            <p>Informasi pelatihan yang akan dilaksanakan</p>
+            <h1>GIA Corpu Weekly Training</h1>
+            <p>Data terpusat dari NeonDB untuk pelatihan yang akan dilaksanakan, dikonfirmasi, dan dibatalkan.</p>
           </div>
         </div>
 
@@ -128,12 +135,8 @@
             <span class="header-control-icon"><svg class="icon"><use href="#icon-calendar"></use></svg></span>
             <span class="header-control-copy">
               <span class="control-label">Periode</span>
-              <select id="periodPreset" aria-label="Pilih periode dashboard">
-                <option value="data">Rentang data</option>
-                <option value="current-week">Minggu ini</option>
-                <option value="next-week">Minggu depan</option>
-                <option value="all">Semua data</option>
-                <option value="custom">Tanggal khusus</option>
+              <select id="periodPreset" aria-label="Pilih minggu dari database" disabled>
+                <option value="">Memuat minggu dari NeonDB...</option>
               </select>
               <span class="control-value" id="periodLabel">Belum ada data</span>
             </span>
@@ -154,18 +157,6 @@
         </div>
       </header>
 
-      <section class="custom-period-panel" id="customPeriodPanel" hidden aria-label="Rentang tanggal khusus">
-        <label>
-          <span>Dari tanggal</span>
-          <input type="date" id="customStartDate">
-        </label>
-        <label>
-          <span>Sampai tanggal</span>
-          <input type="date" id="customEndDate">
-        </label>
-        <button class="secondary-button" id="applyCustomPeriod" type="button">Terapkan</button>
-      </section>
-
       <section class="kpi-grid" aria-label="Ringkasan pelatihan">
         <article class="kpi-card kpi-total">
           <div class="kpi-icon"><svg class="icon"><use href="#icon-calendar"></use></svg></div>
@@ -181,7 +172,7 @@
           <div class="kpi-copy">
             <strong class="kpi-value" id="kpiScheduled">0</strong>
             <span class="kpi-label">Kelas Akan Dilaksanakan</span>
-            <small class="kpi-submetric"><strong id="kpiScheduledTrainingCount">0</strong> judul pelatihan</small>
+            <small class="kpi-submetric"><strong id="kpiScheduledTrainingCount">0</strong> pelatihan akan dilaksanakan</small>
           </div>
         </article>
 
@@ -211,7 +202,7 @@
           <div class="panel-heading">
             <div>
               <svg class="icon"><use href="#icon-pin"></use></svg>
-              <h2>Pelatihan per Lokasi</h2>
+              <h2>Pelatihan per Lokasi <span class="panel-unit">(kelas)</span></h2>
             </div>
           </div>
           <div class="donut-layout">
@@ -233,7 +224,7 @@
           <div class="panel-heading">
             <div>
               <svg class="icon"><use href="#icon-layers"></use></svg>
-              <h2>Pelatihan per Jenis</h2>
+              <h2>Pelatihan per Jenis <span class="panel-unit">(kelas)</span></h2>
             </div>
           </div>
           <div class="bar-chart" id="typeBars"></div>
@@ -254,7 +245,7 @@
             <div class="highlight-item">
               <div class="highlight-icon"><svg class="icon"><use href="#icon-calendar"></use></svg></div>
               <div>
-                <strong>Jenis Pelatihan Terbanyak</strong>
+                <strong>Kelas Terbanyak</strong>
                 <p id="highlightType">Belum ada data.</p>
               </div>
             </div>
@@ -282,7 +273,7 @@
         <div class="table-toolbar">
           <div>
             <h2>Daftar Pelatihan</h2>
-            <p id="datasetLabel">Belum ada file yang diunggah.</p>
+            <p id="datasetLabel">Memuat data dari NeonDB...</p>
           </div>
           <div class="table-filters">
             <label class="filter-control">
@@ -328,7 +319,7 @@
           <div class="empty-table" id="emptyTable" hidden>
             <div class="empty-icon"><svg class="icon"><use href="#icon-database"></use></svg></div>
             <strong>Data tidak ditemukan</strong>
-            <p>Unggah file atau ubah filter untuk menampilkan data pelatihan.</p>
+            <p>Unggah file atau pilih minggu lain untuk menampilkan data pelatihan.</p>
           </div>
         </div>
 
@@ -350,7 +341,7 @@
         <div class="modal-heading-icon"><svg class="icon"><use href="#icon-upload"></use></svg></div>
         <div>
           <h2 id="uploadTitle">Upload Data Pelatihan</h2>
-          <p>File diproses menjadi dashboard tanpa perlu mengubah format tampilan Excel Anda.</p>
+          <p>File diproses lalu disimpan sebagai data pusat di NeonDB. Upload baru mengganti seluruh snapshot sebelumnya.</p>
         </div>
       </div>
 
@@ -360,6 +351,12 @@
         <strong>Tarik file ke sini atau klik untuk memilih</strong>
         <span>Format: XLSX, XLS, atau CSV. Maksimal 4 MB pada Vercel.</span>
         <span class="selected-file" id="selectedFileName"></span>
+      </label>
+
+      <label class="admin-key-field" id="adminKeyGroup" hidden>
+        <span>Kunci admin</span>
+        <input type="password" id="adminKeyInput" autocomplete="current-password" placeholder="Masukkan kunci admin upload">
+        <small>Kunci ini hanya disimpan sementara selama tab browser masih terbuka.</small>
       </label>
 
       <div class="upload-progress" id="uploadProgress" hidden>
@@ -372,13 +369,12 @@
         <div class="column-chips">
           <span>Kode</span><span>Status</span><span>Jenis Pelatihan</span><span>Pembiayaan</span><span>Lokasi</span><span>Jumlah Kelas</span><span>Judul Pelatihan*</span><span>Tanggal Mulai*</span><span>Akhir TM</span>
         </div>
-        <small>* Kolom wajib. Status berisi kata “batal” otomatis dikelompokkan sebagai Dibatalkan.</small>
+        <small>* Kolom wajib. Status berisi kata “batal” otomatis dikelompokkan sebagai Dibatalkan. File upload dianggap sebagai snapshot lengkap seluruh minggu.</small>
       </div>
 
       <div class="modal-actions">
-        <button class="text-button danger-text" id="clearDataButton" type="button">Hapus data tersimpan</button>
+        <button class="text-button" id="clearDataButton" type="button">Muat ulang dari database</button>
         <div>
-          <button class="secondary-button" id="demoDataButton" type="button">Gunakan data contoh</button>
           <button class="primary-button" id="chooseFileButton" type="button">
             <svg class="icon"><use href="#icon-upload"></use></svg>
             Pilih File
@@ -398,7 +394,7 @@
         <div class="modal-heading-icon note-heading-icon"><svg class="icon"><use href="#icon-note"></use></svg></div>
         <div>
           <h2 id="highlightModalTitle">Catatan Tambahan Highlight</h2>
-          <p>Masukkan informasi penting untuk pimpinan. Catatan tersimpan di browser yang sama.</p>
+          <p>Masukkan informasi penting untuk pimpinan. Catatan disimpan per minggu di NeonDB.</p>
         </div>
       </div>
 
@@ -435,6 +431,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
   <script src="/static/app.js" defer></script>
 </body>
 </html>

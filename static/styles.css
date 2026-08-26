@@ -709,6 +709,14 @@ button:disabled {
   letter-spacing: -0.015em;
 }
 
+.panel-unit {
+  margin-left: 3px;
+  color: var(--ink-400);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
 .donut-layout {
   display: grid;
   grid-template-columns: minmax(160px, 0.9fr) minmax(135px, 1fr);
@@ -1966,4 +1974,89 @@ tbody tr.confirmation-row {
   .legend {
     grid-template-columns: 1fr;
   }
+}
+
+/* NeonDB integration */
+.period-control {
+  min-width: 330px;
+  max-width: 430px;
+}
+
+.period-control select {
+  max-width: 320px;
+}
+
+.admin-key-field {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 13px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 13px;
+  background: var(--surface-soft);
+}
+
+.admin-key-field > span {
+  color: var(--ink-800);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-key-field input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  color: var(--ink-900);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  outline: none;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+
+.admin-key-field input:focus {
+  border-color: var(--blue-500, #1f63b5);
+  box-shadow: 0 0 0 3px rgba(31, 99, 181, 0.12);
+}
+
+.admin-key-field small {
+  color: var(--ink-500);
+  font-size: 9.5px;
+}
+
+.highlight-edit-button:disabled,
+.highlight-edit-button:disabled:hover {
+  color: var(--ink-500);
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.55);
+  transform: none;
+}
+
+@media (max-width: 1120px) {
+  .period-control {
+    max-width: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .period-control {
+    min-width: 100%;
+  }
+
+  .period-control select {
+    max-width: 100%;
+  }
+}
+
+
+/* V5 — Export PNG: modal/toast/backdrop are excluded while capturing dashboard. */
+body.exporting-dashboard {
+  overflow: visible !important;
+}
+
+body.exporting-dashboard .modal,
+body.exporting-dashboard .toast,
+body.exporting-dashboard .mobile-backdrop {
+  display: none !important;
 }

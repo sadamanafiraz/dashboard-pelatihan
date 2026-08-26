@@ -1,6 +1,7 @@
 "use strict";
 
-const STORAGE_KEY = "dashboard-pelatihan-v1";
+const STORAGE_KEY = "dashboard-pelatihan-neon-v1";
+const ADMIN_KEY_SESSION = "dashboard-pelatihan-admin-key";
 const LOCATION_COLORS = ["#0b2f6b", "#1f63b5", "#d71920", "#ec5b62", "#6689ca", "#9fb4dc"];
 const STATUS_SORT_ORDER = Object.freeze({
   "Akan Dilaksanakan": 0,
@@ -8,140 +9,22 @@ const STATUS_SORT_ORDER = Object.freeze({
   "Dibatalkan": 2
 });
 
-const DEMO_ROWS = [
-  {
-    id: "demo-322",
-    kode: "322",
-    status_asli: "Realisasi",
-    status_kategori: "Akan Dilaksanakan",
-    jenis_pelatihan: "JFA",
-    pembiayaan: "PNBP",
-    lokasi: "PJJ",
-    jumlah_kelas: 1,
-    judul_pelatihan: "Penjenjangan Auditor Ahli Muda",
-    tanggal_mulai: "2026-08-20",
-    akhir_tm: "2026-09-25"
-  },
-  {
-    id: "demo-746",
-    kode: "746",
-    status_asli: "Realisasi",
-    status_kategori: "Akan Dilaksanakan",
-    jenis_pelatihan: "JFA",
-    pembiayaan: "PNBP",
-    lokasi: "Kab/Kota Bogor",
-    jumlah_kelas: 1,
-    judul_pelatihan: "Pelatihan Fungsional Auditor Ahli Pertama di Lingkungan Inspektorat Utama Badan Intelijen Negara (BIN)",
-    tanggal_mulai: "2026-08-18",
-    akhir_tm: "2026-09-24"
-  },
-  {
-    id: "demo-640",
-    kode: "640",
-    status_asli: "Realisasi",
-    status_kategori: "Akan Dilaksanakan",
-    jenis_pelatihan: "SN-FA",
-    pembiayaan: "PNBP",
-    lokasi: "Pusdiklatwas",
-    jumlah_kelas: 1,
-    judul_pelatihan: "Pelatihan dan Sertifikasi CGRE",
-    tanggal_mulai: "2026-08-18",
-    akhir_tm: "2026-08-20"
-  },
-  {
-    id: "demo-740",
-    kode: "740",
-    status_asli: "Realisasi",
-    status_kategori: "Akan Dilaksanakan",
-    jenis_pelatihan: "SN-FA",
-    pembiayaan: "ABT",
-    lokasi: "Pusdiklatwas",
-    jumlah_kelas: 1,
-    judul_pelatihan: "Pelatihan dan Sertifikasi CCRA di Lingkungan BPKP",
-    tanggal_mulai: "2026-08-18",
-    akhir_tm: "2026-09-02"
-  },
-  {
-    id: "demo-742",
-    kode: "742",
-    status_asli: "Realisasi",
-    status_kategori: "Akan Dilaksanakan",
-    jenis_pelatihan: "SN-FA",
-    pembiayaan: "ABT",
-    lokasi: "Pusdiklatwas",
-    jumlah_kelas: 1,
-    judul_pelatihan: "Pelatihan dan Sertifikasi CGRS di Lingkungan BPKP",
-    tanggal_mulai: "2026-08-20",
-    akhir_tm: "2026-08-27"
-  },
-  {
-    id: "demo-752",
-    kode: "752",
-    status_asli: "Realisasi",
-    status_kategori: "Akan Dilaksanakan",
-    jenis_pelatihan: "JFA",
-    pembiayaan: "PNBP",
-    lokasi: "Ternate",
-    jumlah_kelas: 1,
-    judul_pelatihan: "Pelatihan Fungsional Auditor Ahli Pertama di Lingkungan Pemerintah Daerah Wilayah Provinsi Maluku Utara",
-    tanggal_mulai: "2026-08-18",
-    akhir_tm: "2026-09-17"
-  },
-  {
-    id: "demo-707",
-    kode: "707",
-    status_asli: "Dibatalkan",
-    status_kategori: "Dibatalkan",
-    jenis_pelatihan: "JFA",
-    pembiayaan: "PNBP",
-    lokasi: "Balai Medan",
-    jumlah_kelas: 1,
-    judul_pelatihan: "Pelatihan Fungsional Auditor Ahli Muda di Lingkungan Kejaksaan Agung Batch 2",
-    tanggal_mulai: "2026-08-18",
-    akhir_tm: "2026-09-24"
-  },
-  {
-    id: "demo-717",
-    kode: "717",
-    status_asli: "Realisasi",
-    status_kategori: "Akan Dilaksanakan",
-    jenis_pelatihan: "JFA",
-    pembiayaan: "PNBP",
-    lokasi: "Pusdiklatwas",
-    jumlah_kelas: 1,
-    judul_pelatihan: "Pelatihan Fungsional Auditor Ahli Pertama di Lingkungan Kejaksaan Agung Batch 2",
-    tanggal_mulai: "2026-08-18",
-    akhir_tm: "2026-09-24"
-  },
-  {
-    id: "demo-696",
-    kode: "696",
-    status_asli: "Dalam Konfirmasi",
-    status_kategori: "Dalam Konfirmasi",
-    jenis_pelatihan: "JFA",
-    pembiayaan: "PNBP",
-    lokasi: "Pekanbaru",
-    jumlah_kelas: 1,
-    judul_pelatihan: "Pelatihan Fungsional Auditor Ahli Pertama di Lingkungan Inspektorat Kabupaten Kampar",
-    tanggal_mulai: "2026-08-20",
-    akhir_tm: "2026-09-24"
-  }
-];
-
 const state = {
   rows: [],
+  weeks: [],
   meta: {
     fileName: "",
     sheetName: "",
     uploadedAt: ""
   },
-  periodPreset: "data",
-  customStart: "",
-  customEnd: "",
+  periodPreset: "",
   statusFilter: "all",
   locationFilter: "all",
   search: "",
-  highlightNote: ""
+  highlightNote: "",
+  databaseConnected: false,
+  uploadProtected: false,
+  loading: false
 };
 
 const elements = {};
@@ -150,8 +33,7 @@ let toastTimer = null;
 function cacheElements() {
   const ids = [
     "sidebar", "mobileBackdrop", "menuButton", "periodPreset", "periodLabel",
-    "lastUpdated", "changeDataButton", "customPeriodPanel", "customStartDate",
-    "customEndDate", "applyCustomPeriod", "kpiTotal", "kpiTotalTrainingCount", "kpiScheduled",
+    "lastUpdated", "exportPngButton", "changeDataButton", "kpiTotal", "kpiTotalTrainingCount", "kpiScheduled",
     "kpiScheduledTrainingCount", "kpiConfirmation", "kpiCancelled",
     "confirmationProgress", "cancelledProgress", "confirmationPercent", "cancelledPercent",
     "donutSegments", "donutTotal", "locationLegend", "typeBars", "highlightType",
@@ -159,7 +41,7 @@ function cacheElements() {
     "customHighlightDivider", "datasetLabel", "statusFilter", "locationFilter", "searchInput",
     "trainingTableBody", "emptyTable", "paginationInfo", "uploadModal", "uploadCloseButton",
     "dropzone", "fileInput", "selectedFileName", "uploadProgress", "uploadMessage",
-    "clearDataButton", "demoDataButton", "chooseFileButton", "highlightModal",
+    "clearDataButton", "chooseFileButton", "adminKeyGroup", "adminKeyInput", "highlightModal",
     "highlightCloseButton", "highlightTextInput", "highlightCharacterCount",
     "clearHighlightButton", "cancelHighlightButton", "saveHighlightButton", "detailModal",
     "detailCloseButton", "detailStatus", "detailTitle", "detailSubtitle", "detailGrid", "toast"
@@ -185,6 +67,12 @@ function toIsoDate(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function addDays(source, days) {
+  const date = new Date(source.getFullYear(), source.getMonth(), source.getDate());
+  date.setDate(date.getDate() + days);
+  return date;
 }
 
 function formatDate(value) {
@@ -222,13 +110,6 @@ function startOfWeek(sourceDate, offsetWeeks = 0) {
   return date;
 }
 
-function endOfWeek(sourceDate, offsetWeeks = 0) {
-  const start = startOfWeek(sourceDate, offsetWeeks);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  return end;
-}
-
 function getDataRange() {
   const dates = state.rows
     .map((row) => parseDateOnly(row.tanggal_mulai))
@@ -240,37 +121,15 @@ function getDataRange() {
 }
 
 function getPeriodBounds() {
-  if (!state.rows.length || state.periodPreset === "all") {
+  if (state.periodPreset === "all") {
     return { start: null, end: null };
   }
-
-  if (state.periodPreset === "current-week") {
-    const now = new Date();
-    return { start: startOfWeek(now), end: endOfWeek(now) };
-  }
-
-  if (state.periodPreset === "next-week") {
-    const now = new Date();
-    return { start: startOfWeek(now, 1), end: endOfWeek(now, 1) };
-  }
-
-  if (state.periodPreset === "custom") {
-    return {
-      start: parseDateOnly(state.customStart),
-      end: parseDateOnly(state.customEnd)
-    };
-  }
-
-  return getDataRange();
+  const start = parseDateOnly(state.periodPreset);
+  return start ? { start, end: addDays(start, 6) } : getDataRange();
 }
 
 function getPeriodRows() {
-  const { start, end } = getPeriodBounds();
-  if (!start || !end) return [...state.rows];
-  return state.rows.filter((row) => {
-    const date = parseDateOnly(row.tanggal_mulai);
-    return date && date >= start && date <= end;
-  });
+  return [...state.rows];
 }
 
 function getClassCount(row) {
@@ -347,6 +206,17 @@ function countBy(rows, property) {
     .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label, "id"));
 }
 
+function countClassesBy(rows, property) {
+  const counts = new Map();
+  rows.forEach((row) => {
+    const key = String(row[property] || "Lainnya").trim() || "Lainnya";
+    counts.set(key, (counts.get(key) || 0) + getClassCount(row));
+  });
+  return [...counts.entries()]
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label, "id"));
+}
+
 function compactGroups(groups, limit) {
   if (groups.length <= limit) return groups;
   const visible = groups.slice(0, limit - 1);
@@ -354,43 +224,90 @@ function compactGroups(groups, limit) {
   return [...visible, { label: "Lainnya", value: others }];
 }
 
-function formatPeriodLabel() {
-  if (!state.rows.length) return "Belum ada data";
-  if (state.periodPreset === "all") return "Semua tanggal";
-  const { start, end } = getPeriodBounds();
-  if (!start || !end) return "Rentang belum valid";
-  return `${formatDate(toIsoDate(start))} – ${formatDate(toIsoDate(end))}`;
+function formatWeekRange(weekStart) {
+  const start = parseDateOnly(weekStart);
+  if (!start) return "Periode tidak valid";
+  return `${formatDate(toIsoDate(start))} – ${formatDate(toIsoDate(addDays(start, 6)))}`;
 }
 
-function chooseDefaultPeriod(rows) {
-  const now = new Date();
-  const nextStart = startOfWeek(now, 1);
-  const nextEnd = endOfWeek(now, 1);
-  const hasNextWeek = rows.some((row) => {
-    const date = parseDateOnly(row.tanggal_mulai);
-    return date && date >= nextStart && date <= nextEnd;
-  });
-  return hasNextWeek ? "next-week" : "data";
+function relativeWeekName(weekStart) {
+  const current = toIsoDate(startOfWeek(new Date()));
+  const next = toIsoDate(startOfWeek(new Date(), 1));
+  if (weekStart === current) return "Minggu ini";
+  if (weekStart === next) return "Minggu depan";
+  return "Minggu data";
+}
+
+function formatPeriodLabel() {
+  if (state.loading) return "Memuat data...";
+  if (!state.databaseConnected) return "Database belum terhubung";
+  if (!state.periodPreset) return "Belum ada periode";
+  if (state.periodPreset === "all") return "Semua data di database";
+  return formatWeekRange(state.periodPreset);
+}
+
+function formatWeekOption(week) {
+  const start = String(week.week_start || "");
+  const trainingCount = Number(week.training_count || 0);
+  const classCount = Number(week.class_count || 0);
+  return `${relativeWeekName(start)} • ${formatWeekRange(start)} • ${trainingCount} judul / ${classCount} kelas`;
+}
+
+function chooseDefaultPeriod(weeks, preferred = "") {
+  const available = new Set(weeks.map((week) => String(week.week_start)));
+  if (preferred === "all" || available.has(preferred)) return preferred;
+
+  const saved = loadPreference();
+  if (saved === "all" || available.has(saved)) return saved;
+
+  const next = toIsoDate(startOfWeek(new Date(), 1));
+  if (available.has(next)) return next;
+
+  const current = toIsoDate(startOfWeek(new Date()));
+  if (available.has(current)) return current;
+
+  const future = weeks
+    .map((week) => String(week.week_start))
+    .filter((value) => value > current)
+    .sort();
+  if (future.length) return future[0];
+
+  return weeks.length ? String(weeks[0].week_start) : "";
 }
 
 function renderPeriod() {
+  const options = [];
+  if (state.weeks.length) {
+    options.push('<option value="all">Semua data</option>');
+    state.weeks.forEach((week) => {
+      const value = String(week.week_start || "");
+      options.push(`<option value="${escapeAttribute(value)}">${escapeHtml(formatWeekOption(week))}</option>`);
+    });
+  } else {
+    options.push('<option value="">Belum ada minggu di database</option>');
+  }
+
+  elements.periodPreset.innerHTML = options.join("");
   elements.periodPreset.value = state.periodPreset;
+  elements.periodPreset.disabled = state.loading || !state.databaseConnected || !state.weeks.length;
   elements.periodLabel.textContent = formatPeriodLabel();
-  elements.customPeriodPanel.hidden = state.periodPreset !== "custom";
-  elements.customStartDate.value = state.customStart;
-  elements.customEndDate.value = state.customEnd;
 }
 
 function renderHeader() {
   elements.lastUpdated.textContent = formatDateLong(state.meta.uploadedAt);
-  if (!state.rows.length) {
-    elements.datasetLabel.textContent = "Belum ada file yang diunggah.";
+  if (!state.databaseConnected) {
+    elements.datasetLabel.textContent = "NeonDB belum terhubung atau belum dapat diakses.";
     return;
   }
 
-  const parts = [state.meta.fileName || "Data pelatihan"];
+  if (!state.weeks.length) {
+    elements.datasetLabel.textContent = "Database sudah terhubung, tetapi belum memiliki data pelatihan.";
+    return;
+  }
+
+  const parts = [state.meta.fileName || "Data pelatihan NeonDB"];
   if (state.meta.sheetName) parts.push(`Sheet: ${state.meta.sheetName}`);
-  parts.push(`${state.rows.length} baris`);
+  parts.push(`${state.rows.length} baris pada periode ini`);
   elements.datasetLabel.textContent = parts.join(" • ");
 }
 
@@ -425,8 +342,8 @@ function renderKpis() {
 
 function renderLocationChart() {
   const rows = getPeriodRows();
-  const total = rows.length;
-  const groups = compactGroups(countBy(rows, "lokasi"), 5);
+  const total = sumClasses(rows);
+  const groups = compactGroups(countClassesBy(rows, "lokasi"), 5);
   const radius = 56;
   const circumference = 2 * Math.PI * radius;
   let offset = 0;
@@ -465,7 +382,7 @@ function renderLocationChart() {
 
 function renderTypeChart() {
   const rows = getPeriodRows();
-  const groups = compactGroups(countBy(rows, "jenis_pelatihan"), 5);
+  const groups = compactGroups(countClassesBy(rows, "jenis_pelatihan"), 5);
 
   if (!groups.length) {
     elements.typeBars.innerHTML = '<div class="empty-chart">Belum ada data jenis pelatihan pada periode ini.</div>';
@@ -487,8 +404,8 @@ function renderTypeChart() {
 
 function renderHighlights() {
   const rows = getPeriodRows();
-  const types = countBy(rows, "jenis_pelatihan");
-  const locations = countBy(rows, "lokasi");
+  const types = countClassesBy(rows, "jenis_pelatihan");
+  const locations = countClassesBy(rows, "lokasi");
 
   if (!rows.length) {
     elements.highlightType.textContent = "Belum ada data pada periode yang dipilih.";
@@ -496,8 +413,8 @@ function renderHighlights() {
   } else {
     const topType = types[0];
     const topLocation = locations[0];
-    elements.highlightType.textContent = `Jenis ${topType.label} mendominasi dengan ${topType.value} sesi pelatihan.`;
-    elements.highlightLocation.textContent = `${topLocation.label} menjadi lokasi terbanyak dengan ${topLocation.value} sesi.`;
+    elements.highlightType.textContent = `Pelatihan ${topType.label} mendominasi dengan ${topType.value} kelas.`;
+    elements.highlightLocation.textContent = `${topLocation.label} menjadi lokasi terbanyak dengan ${topLocation.value} kelas.`;
   }
 
   const hasCustomNote = Boolean(state.highlightNote.trim());
@@ -505,10 +422,17 @@ function renderHighlights() {
   elements.customHighlightDivider.hidden = !hasCustomNote;
   elements.highlightCustomText.textContent = hasCustomNote ? state.highlightNote : "";
   const buttonLabel = elements.highlightEditButton.querySelector("span");
-  if (buttonLabel) buttonLabel.textContent = hasCustomNote ? "Edit Catatan" : "Tambah Catatan";
+  if (buttonLabel) {
+    buttonLabel.textContent = state.periodPreset === "all"
+      ? "Pilih Minggu"
+      : (hasCustomNote ? "Edit Catatan" : "Tambah Catatan");
+  }
+  elements.highlightEditButton.disabled = !state.databaseConnected || !state.periodPreset || state.periodPreset === "all";
   elements.highlightEditButton.setAttribute(
     "aria-label",
-    hasCustomNote ? "Edit catatan tambahan highlight" : "Tambah catatan highlight"
+    state.periodPreset === "all"
+      ? "Pilih satu minggu untuk mengelola catatan"
+      : (hasCustomNote ? "Edit catatan tambahan highlight" : "Tambah catatan highlight")
   );
 }
 
@@ -581,7 +505,8 @@ function renderAll() {
   elements.statusFilter.value = state.statusFilter;
   elements.searchInput.value = state.search;
   renderTable();
-  elements.clearDataButton.disabled = !state.rows.length && !state.highlightNote;
+  elements.clearDataButton.disabled = state.loading || !state.databaseConnected;
+  elements.changeDataButton.disabled = state.loading;
 }
 
 function escapeHtml(value) {
@@ -600,7 +525,7 @@ function escapeAttribute(value) {
 function normalizeIncomingRows(rows) {
   if (!Array.isArray(rows)) return [];
   return rows.map((row, index) => ({
-    id: String(row.id || `row-${index + 1}-${Date.now()}`),
+    id: String(row.id || `row-${index + 1}`),
     kode: String(row.kode || "-"),
     status_asli: String(row.status_asli || "-"),
     status_kategori: ["Akan Dilaksanakan", "Dalam Konfirmasi", "Dibatalkan"].includes(row.status_kategori)
@@ -616,67 +541,214 @@ function normalizeIncomingRows(rows) {
   })).filter((row) => parseDateOnly(row.tanggal_mulai));
 }
 
-function saveToStorage() {
+function normalizeMeta(meta) {
+  return {
+    fileName: String(meta?.file_name || meta?.fileName || ""),
+    sheetName: String(meta?.sheet_name || meta?.sheetName || ""),
+    uploadedAt: String(meta?.uploaded_at || meta?.uploadedAt || "")
+  };
+}
+
+function savePreference() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      rows: state.rows,
-      meta: state.meta,
-      highlightNote: state.highlightNote
+      periodPreset: state.periodPreset
     }));
   } catch (error) {
-    showToast("Data berhasil dimuat, tetapi terlalu besar untuk disimpan di browser.", "error");
+    // Preference storage is optional; the dashboard still works without it.
   }
 }
 
-function loadFromStorage() {
+function loadPreference() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
+    if (!raw) return "";
     const parsed = JSON.parse(raw);
-    state.highlightNote = String(parsed.highlightNote || "").trim().slice(0, 500);
-    const rows = normalizeIncomingRows(parsed.rows);
-    if (!rows.length) return false;
-    state.rows = rows;
-    state.meta = {
-      fileName: String(parsed.meta?.fileName || "Data tersimpan"),
-      sheetName: String(parsed.meta?.sheetName || ""),
-      uploadedAt: String(parsed.meta?.uploadedAt || new Date().toISOString())
-    };
-    state.periodPreset = chooseDefaultPeriod(rows);
-    return true;
+    return String(parsed.periodPreset || "");
   } catch (error) {
     localStorage.removeItem(STORAGE_KEY);
-    state.highlightNote = "";
-    return false;
+    return "";
   }
 }
 
-function applyDataset(payload, fallbackName = "Data pelatihan") {
-  const rows = normalizeIncomingRows(payload.rows);
-  if (!rows.length) {
-    throw new Error("Tidak ada data valid yang dapat ditampilkan.");
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, options);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (response.status === 401) sessionStorage.removeItem(ADMIN_KEY_SESSION);
+    throw new Error(payload.detail || payload.message || "Permintaan gagal diproses.");
   }
+  return payload;
+}
 
-  state.rows = rows;
-  state.meta = {
-    fileName: String(payload.file_name || payload.fileName || fallbackName),
-    sheetName: String(payload.sheet_name || payload.sheetName || ""),
-    uploadedAt: String(payload.uploaded_at || payload.uploadedAt || new Date().toISOString())
-  };
-  state.periodPreset = chooseDefaultPeriod(rows);
-  state.customStart = "";
-  state.customEnd = "";
+function resetFilters() {
   state.statusFilter = "all";
   state.locationFilter = "all";
   state.search = "";
-  saveToStorage();
+}
+
+async function loadPeriod(period, { showToastAfter = false } = {}) {
+  if (!period) {
+    state.rows = [];
+    state.highlightNote = "";
+    renderAll();
+    return;
+  }
+
+  state.loading = true;
+  state.periodPreset = period;
   renderAll();
+
+  try {
+    const query = period === "all" ? "" : `?week_start=${encodeURIComponent(period)}`;
+    const payload = await requestJson(`/api/trainings${query}`);
+    state.rows = normalizeIncomingRows(payload.rows);
+    state.highlightNote = String(payload.note || "").trim().slice(0, 500);
+    state.meta = normalizeMeta(payload.meta);
+    state.uploadProtected = Boolean(payload.upload_protected);
+    state.databaseConnected = true;
+    resetFilters();
+    savePreference();
+    if (showToastAfter) showToast("Data terbaru berhasil dimuat dari NeonDB.");
+  } catch (error) {
+    state.rows = [];
+    state.highlightNote = "";
+    showToast(error.message || "Data gagal dimuat dari NeonDB.", "error");
+  } finally {
+    state.loading = false;
+    renderAll();
+  }
+}
+
+async function loadWeeksFromDatabase(preferredPeriod = "", { showToastAfter = false } = {}) {
+  state.loading = true;
+  renderAll();
+
+  try {
+    const payload = await requestJson("/api/weeks");
+    state.weeks = Array.isArray(payload.weeks) ? payload.weeks : [];
+    state.meta = normalizeMeta(payload.meta);
+    state.uploadProtected = Boolean(payload.upload_protected);
+    state.databaseConnected = true;
+    const chosen = chooseDefaultPeriod(state.weeks, preferredPeriod);
+    state.loading = false;
+
+    if (chosen) {
+      await loadPeriod(chosen, { showToastAfter });
+      return;
+    }
+
+    state.periodPreset = "";
+    state.rows = [];
+    state.highlightNote = "";
+    resetFilters();
+    renderAll();
+    window.setTimeout(showUploadModal, 180);
+  } catch (error) {
+    state.loading = false;
+    state.databaseConnected = false;
+    state.weeks = [];
+    state.rows = [];
+    state.highlightNote = "";
+    renderAll();
+    showToast(error.message || "NeonDB tidak dapat diakses.", "error");
+  }
+}
+
+function buildExportFilename() {
+  const period = state.periodPreset && state.periodPreset !== "all"
+    ? state.periodPreset
+    : "semua-data";
+  return `dashboard-pelatihan-${period}.png`;
+}
+
+async function exportDashboardAsPng() {
+  if (typeof window.html2canvas !== "function") {
+    showToast("Fitur export PNG belum siap. Muat ulang halaman lalu coba lagi.", "error");
+    return;
+  }
+
+  const target = document.querySelector(".main-content");
+  if (!target) return;
+
+  const button = elements.exportPngButton;
+  const label = button.querySelector("span");
+  const originalLabel = label?.textContent || "Export PNG";
+  const previousX = window.scrollX;
+  const previousY = window.scrollY;
+
+  button.disabled = true;
+  if (label) label.textContent = "Menyiapkan...";
+  document.body.classList.add("exporting-dashboard");
+
+  try {
+    window.scrollTo(0, 0);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+    // Hanya .main-content yang ditangkap, sehingga sidebar/toolbar kiri
+    // dan tombol Export PNG tidak masuk ke hasil file.
+    const width = target.scrollWidth;
+    const height = target.scrollHeight;
+    const scale = Math.min(2, Math.max(1.35, window.devicePixelRatio || 1));
+
+    const canvas = await window.html2canvas(target, {
+      backgroundColor: "#f3f6fb",
+      scale,
+      useCORS: true,
+      logging: false,
+      scrollX: 0,
+      scrollY: 0,
+      width,
+      height,
+      windowWidth: width,
+      windowHeight: height,
+      onclone: (clonedDocument) => {
+        clonedDocument.body.classList.add("exporting-dashboard");
+        clonedDocument.querySelectorAll(".modal, .toast, .mobile-backdrop").forEach((node) => {
+          node.style.display = "none";
+        });
+
+        const clonedSidebar = clonedDocument.querySelector(".sidebar");
+        if (clonedSidebar) clonedSidebar.style.display = "none";
+
+        const clonedMain = clonedDocument.querySelector(".main-content");
+        if (clonedMain) {
+          clonedMain.style.marginLeft = "0";
+          clonedMain.style.width = "100%";
+          clonedMain.style.minHeight = `${height}px`;
+        }
+      },
+    });
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) throw new Error("PNG tidak dapat dibuat.");
+
+    const objectUrl = URL.createObjectURL(blob);
+    const downloadLink = document.createElement("a");
+    downloadLink.href = objectUrl;
+    downloadLink.download = buildExportFilename();
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    showToast("Dashboard berhasil diekspor sebagai PNG tanpa toolbar.");
+  } catch (error) {
+    console.error(error);
+    showToast("Export PNG gagal. Coba ulangi setelah halaman selesai dimuat.", "error");
+  } finally {
+    document.body.classList.remove("exporting-dashboard");
+    window.scrollTo(previousX, previousY);
+    button.disabled = false;
+    if (label) label.textContent = originalLabel;
+  }
 }
 
 function showUploadModal() {
   elements.uploadModal.hidden = false;
   document.body.style.overflow = "hidden";
   resetUploadFeedback();
+  elements.adminKeyGroup.hidden = !state.uploadProtected;
+  elements.adminKeyInput.value = sessionStorage.getItem(ADMIN_KEY_SESSION) || "";
 }
 
 function closeUploadModal() {
@@ -689,6 +761,10 @@ function updateHighlightCharacterCount() {
 }
 
 function showHighlightModal() {
+  if (!state.periodPreset || state.periodPreset === "all") {
+    showToast("Pilih satu minggu untuk menambah catatan.", "error");
+    return;
+  }
   elements.highlightTextInput.value = state.highlightNote;
   updateHighlightCharacterCount();
   elements.clearHighlightButton.disabled = !state.highlightNote;
@@ -702,25 +778,66 @@ function closeHighlightModal() {
   document.body.style.overflow = "";
 }
 
-function saveHighlightNote() {
-  state.highlightNote = elements.highlightTextInput.value.trim().slice(0, 500);
-  saveToStorage();
-  renderAll();
-  closeHighlightModal();
-  showToast(state.highlightNote ? "Catatan highlight berhasil disimpan." : "Catatan highlight dikosongkan.");
+function getAdminKey({ promptIfMissing = false } = {}) {
+  let key = String(elements.adminKeyInput?.value || sessionStorage.getItem(ADMIN_KEY_SESSION) || "").trim();
+  if (!key && state.uploadProtected && promptIfMissing) {
+    key = String(window.prompt("Masukkan kunci admin untuk menyimpan perubahan:") || "").trim();
+  }
+  if (key) sessionStorage.setItem(ADMIN_KEY_SESSION, key);
+  return key;
 }
 
-function clearHighlightNote() {
-  if (!state.highlightNote && !elements.highlightTextInput.value.trim()) return;
-  const confirmed = window.confirm("Hapus catatan tambahan pada highlight?");
+function adminHeaders({ includeJson = false, promptIfMissing = false } = {}) {
+  const headers = {};
+  if (includeJson) headers["Content-Type"] = "application/json";
+  const key = getAdminKey({ promptIfMissing });
+  if (key) headers["X-Admin-Key"] = key;
+  return headers;
+}
+
+async function saveHighlightNote() {
+  if (!state.periodPreset || state.periodPreset === "all") return;
+  const note = elements.highlightTextInput.value.trim().slice(0, 500);
+  elements.saveHighlightButton.disabled = true;
+  try {
+    await requestJson(`/api/notes/${encodeURIComponent(state.periodPreset)}`, {
+      method: "PUT",
+      headers: adminHeaders({ includeJson: true, promptIfMissing: true }),
+      body: JSON.stringify({ note })
+    });
+    state.highlightNote = note;
+    renderAll();
+    closeHighlightModal();
+    showToast(note ? "Catatan highlight berhasil disimpan ke NeonDB." : "Catatan highlight dikosongkan.");
+  } catch (error) {
+    showToast(error.message || "Catatan gagal disimpan.", "error");
+  } finally {
+    elements.saveHighlightButton.disabled = false;
+  }
+}
+
+async function clearHighlightNote() {
+  if (!state.periodPreset || state.periodPreset === "all") return;
+  const confirmed = window.confirm("Hapus catatan tambahan pada minggu ini dari NeonDB?");
   if (!confirmed) return;
-  state.highlightNote = "";
-  elements.highlightTextInput.value = "";
-  updateHighlightCharacterCount();
-  saveToStorage();
-  renderAll();
-  closeHighlightModal();
-  showToast("Catatan highlight sudah dihapus.");
+
+  elements.clearHighlightButton.disabled = true;
+  try {
+    await requestJson(`/api/notes/${encodeURIComponent(state.periodPreset)}`, {
+      method: "DELETE",
+      headers: adminHeaders({ promptIfMissing: true })
+    });
+    state.highlightNote = "";
+    elements.highlightTextInput.value = "";
+    updateHighlightCharacterCount();
+    renderAll();
+    closeHighlightModal();
+    showToast("Catatan highlight sudah dihapus dari NeonDB.");
+  } catch (error) {
+    showToast(error.message || "Catatan gagal dihapus.", "error");
+  } finally {
+    elements.clearHighlightButton.disabled = false;
+  }
 }
 
 function showDetailModal(row) {
@@ -767,7 +884,6 @@ function setUploadState({ loading = false, message = "", type = "" } = {}) {
   elements.uploadMessage.textContent = message;
   elements.uploadMessage.className = `upload-message${type ? ` ${type}` : ""}`;
   elements.chooseFileButton.disabled = loading;
-  elements.demoDataButton.disabled = loading;
 }
 
 async function uploadFile(file) {
@@ -782,64 +898,49 @@ async function uploadFile(file) {
     return;
   }
 
+  const adminKey = getAdminKey();
+  if (state.uploadProtected && !adminKey) {
+    setUploadState({ message: "Masukkan kunci admin sebelum mengunggah data.", type: "error" });
+    elements.adminKeyInput.focus();
+    return;
+  }
+
   elements.selectedFileName.textContent = file.name;
-  setUploadState({ loading: true, message: "Memproses file dan menyusun dashboard..." });
+  setUploadState({ loading: true, message: "Memproses file dan menyimpan snapshot ke NeonDB..." });
 
   const formData = new FormData();
   formData.append("file", file);
+  const headers = {};
+  if (adminKey) headers["X-Admin-Key"] = adminKey;
 
   try {
-    const response = await fetch("/api/upload", { method: "POST", body: formData });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(payload.detail || "File gagal diproses.");
-    }
-
-    applyDataset(payload, file.name);
-    setUploadState({ message: `${payload.row_count || state.rows.length} baris berhasil dimuat.`, type: "success" });
+    const payload = await requestJson("/api/upload", {
+      method: "POST",
+      headers,
+      body: formData
+    });
+    if (adminKey) sessionStorage.setItem(ADMIN_KEY_SESSION, adminKey);
+    setUploadState({
+      message: `${payload.row_count || 0} baris berhasil disimpan ke NeonDB.`,
+      type: "success"
+    });
     closeUploadModal();
+    await loadWeeksFromDatabase(String(payload.default_week || ""));
 
     const warningText = Array.isArray(payload.warnings) && payload.warnings.length
       ? ` ${payload.warnings.join(" ")}`
       : "";
-    showToast(`Data ${file.name} berhasil ditampilkan.${warningText}`);
+    showToast(`Data ${file.name} berhasil diperbarui.${warningText}`);
   } catch (error) {
     setUploadState({ message: error.message || "File gagal diproses.", type: "error" });
   } finally {
     elements.uploadProgress.hidden = true;
     elements.chooseFileButton.disabled = false;
-    elements.demoDataButton.disabled = false;
   }
 }
 
-function useDemoData() {
-  applyDataset({
-    fileName: "Data Contoh Pelatihan",
-    sheetName: "Contoh",
-    uploadedAt: new Date().toISOString(),
-    rows: DEMO_ROWS
-  });
-  closeUploadModal();
-  showToast("Data contoh berhasil dimuat. Gunakan tombol Ganti Data untuk mengunggah file Anda.");
-}
-
-function clearStoredData() {
-  if (!state.rows.length && !state.highlightNote) return;
-  const confirmed = window.confirm("Hapus data dashboard dan catatan tambahan yang tersimpan di browser ini?");
-  if (!confirmed) return;
-
-  localStorage.removeItem(STORAGE_KEY);
-  state.rows = [];
-  state.meta = { fileName: "", sheetName: "", uploadedAt: "" };
-  state.periodPreset = "data";
-  state.customStart = "";
-  state.customEnd = "";
-  state.statusFilter = "all";
-  state.locationFilter = "all";
-  state.search = "";
-  state.highlightNote = "";
-  renderAll();
-  setUploadState({ message: "Data dan catatan tersimpan sudah dihapus.", type: "success" });
+async function reloadDatabase() {
+  await loadWeeksFromDatabase(state.periodPreset, { showToastAfter: true });
 }
 
 function showToast(message, type = "success") {
@@ -849,7 +950,7 @@ function showToast(message, type = "success") {
   elements.toast.hidden = false;
   toastTimer = window.setTimeout(() => {
     elements.toast.hidden = true;
-  }, 4200);
+  }, 5200);
 }
 
 function openMobileMenu() {
@@ -860,12 +961,6 @@ function openMobileMenu() {
 function closeMobileMenu() {
   elements.sidebar.classList.remove("open");
   elements.mobileBackdrop.hidden = true;
-}
-
-function initializeCustomDates() {
-  const range = getDataRange();
-  if (!state.customStart && range.start) state.customStart = toIsoDate(range.start);
-  if (!state.customEnd && range.end) state.customEnd = toIsoDate(range.end);
 }
 
 function attachEvents() {
@@ -883,30 +978,13 @@ function attachEvents() {
     });
   });
 
+  elements.exportPngButton.addEventListener("click", exportDashboardAsPng);
   elements.changeDataButton.addEventListener("click", showUploadModal);
   elements.menuButton.addEventListener("click", openMobileMenu);
   elements.mobileBackdrop.addEventListener("click", closeMobileMenu);
 
-  elements.periodPreset.addEventListener("change", (event) => {
-    state.periodPreset = event.target.value;
-    if (state.periodPreset === "custom") initializeCustomDates();
-    renderAll();
-  });
-
-  elements.applyCustomPeriod.addEventListener("click", () => {
-    const start = elements.customStartDate.value;
-    const end = elements.customEndDate.value;
-    if (!start || !end) {
-      showToast("Pilih tanggal awal dan akhir.", "error");
-      return;
-    }
-    if (parseDateOnly(start) > parseDateOnly(end)) {
-      showToast("Tanggal awal tidak boleh setelah tanggal akhir.", "error");
-      return;
-    }
-    state.customStart = start;
-    state.customEnd = end;
-    renderAll();
+  elements.periodPreset.addEventListener("change", async (event) => {
+    await loadPeriod(event.target.value);
   });
 
   elements.statusFilter.addEventListener("change", (event) => {
@@ -952,8 +1030,7 @@ function attachEvents() {
 
   elements.chooseFileButton.addEventListener("click", () => elements.fileInput.click());
   elements.fileInput.addEventListener("change", (event) => uploadFile(event.target.files?.[0]));
-  elements.demoDataButton.addEventListener("click", useDemoData);
-  elements.clearDataButton.addEventListener("click", clearStoredData);
+  elements.clearDataButton.addEventListener("click", reloadDatabase);
 
   ["dragenter", "dragover"].forEach((eventName) => {
     elements.dropzone.addEventListener(eventName, (event) => {
@@ -982,24 +1059,11 @@ function attachEvents() {
   });
 }
 
-function init() {
+async function init() {
   cacheElements();
   attachEvents();
-  const hasStoredData = loadFromStorage();
-  const demoMode = new URLSearchParams(window.location.search).get("demo") === "1";
-  if (!hasStoredData && demoMode) {
-    applyDataset({
-      fileName: "Data Contoh Pelatihan",
-      sheetName: "Contoh",
-      uploadedAt: new Date().toISOString(),
-      rows: DEMO_ROWS
-    });
-    return;
-  }
   renderAll();
-  if (!hasStoredData) {
-    window.setTimeout(showUploadModal, 220);
-  }
+  await loadWeeksFromDatabase();
 }
 
 document.addEventListener("DOMContentLoaded", init);
