@@ -916,7 +916,7 @@ async function uploadFile(file) {
   }
 
   elements.selectedFileName.textContent = file.name;
-  setUploadState({ loading: true, message: "Memproses file dan menyimpan snapshot ke NeonDB..." });
+  setUploadState({ loading: true, message: "Memproses file dan memperbarui NeonDB berdasarkan Kode Diklat..." });
 
   const formData = new FormData();
   formData.append("file", file);
@@ -930,8 +930,20 @@ async function uploadFile(file) {
       body: formData
     });
     if (adminKey) sessionStorage.setItem(ADMIN_KEY_SESSION, adminKey);
+    const processed = Number(payload.processed_count || payload.row_count || 0);
+    const inserted = Number(payload.inserted_count || 0);
+    const updated = Number(payload.updated_count || 0);
+    const skipped = Number(payload.skipped_count || 0);
+    const totalDatabaseRows = Number(payload.total_database_rows || 0);
+    const summary = [
+      `${processed} data diproses`,
+      `${inserted} data baru`,
+      `${updated} data diperbarui`
+    ];
+    if (skipped > 0) summary.push(`${skipped} data dilewati`);
+
     setUploadState({
-      message: `${payload.row_count || 0} baris berhasil disimpan ke NeonDB.`,
+      message: `${summary.join(" • ")}. Total database: ${totalDatabaseRows} data.`,
       type: "success"
     });
     closeUploadModal();
@@ -940,7 +952,7 @@ async function uploadFile(file) {
     const warningText = Array.isArray(payload.warnings) && payload.warnings.length
       ? ` ${payload.warnings.join(" ")}`
       : "";
-    showToast(`Data ${file.name} berhasil diperbarui.${warningText}`);
+    showToast(`Update ${file.name} berhasil: ${summary.join(" • ")}.${warningText}`);
   } catch (error) {
     setUploadState({ message: error.message || "File gagal diproses.", type: "error" });
   } finally {

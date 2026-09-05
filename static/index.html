@@ -95,7 +95,7 @@
         </button>
         <button class="nav-item" type="button" data-action="upload">
           <svg class="icon"><use href="#icon-upload"></use></svg>
-          <span>Upload Data</span>
+          <span>Update Data</span>
         </button>
         <button class="nav-item" id="exportPngButton" type="button" data-action="export" title="Unduh dashboard sebagai PNG">
           <svg class="icon"><use href="#icon-download"></use></svg>
@@ -108,7 +108,7 @@
           <svg class="icon"><use href="#icon-info"></use></svg>
           <span>Informasi</span>
         </div>
-        <p>Unggah data Excel atau CSV, lalu dashboard menyajikan ringkasan pelatihan. Export PNG hanya menangkap area dashboard tanpa toolbar kiri. Grafik lokasi dan jenis menghitung jumlah kelas.</p>
+        <p>Update Excel atau CSV untuk menambah pelatihan baru dan memperbarui data lama berdasarkan Kode Diklat. Data minggu sebelumnya tetap tersimpan. Export PNG hanya menangkap area dashboard tanpa toolbar kiri.</p>
       </div>
     </aside>
 
@@ -152,7 +152,7 @@
 
           <button class="primary-button compact" id="changeDataButton" type="button">
             <svg class="icon"><use href="#icon-upload"></use></svg>
-            <span>Ganti Data</span>
+            <span>Update Data</span>
           </button>
         </div>
       </header>
@@ -340,8 +340,8 @@
       <div class="modal-heading">
         <div class="modal-heading-icon"><svg class="icon"><use href="#icon-upload"></use></svg></div>
         <div>
-          <h2 id="uploadTitle">Upload Data Pelatihan</h2>
-          <p>File diproses lalu disimpan sebagai data pusat di NeonDB. Upload baru mengganti seluruh snapshot sebelumnya.</p>
+          <h2 id="uploadTitle">Update Data Pelatihan</h2>
+          <p>File diproses dengan mekanisme upsert. Kode Diklat baru ditambahkan, sedangkan Kode yang sudah ada hanya memperbarui informasi pada kolom lainnya. Data lama yang tidak ada di file tetap tersimpan.</p>
         </div>
       </div>
 
@@ -367,9 +367,9 @@
       <div class="column-guide">
         <h3>Kolom yang dikenali</h3>
         <div class="column-chips">
-          <span>Kode</span><span>Status</span><span>Jenis Pelatihan</span><span>Pembiayaan</span><span>Lokasi</span><span>Jumlah Kelas</span><span>Judul Pelatihan*</span><span>Tanggal Mulai*</span><span>Akhir TM</span>
+          <span>Kode*</span><span>Status</span><span>Jenis Pelatihan</span><span>Pembiayaan</span><span>Lokasi</span><span>Jumlah Kelas</span><span>Judul Pelatihan*</span><span>Tanggal Mulai*</span><span>Akhir TM</span>
         </div>
-        <small>* Kolom wajib. Status berisi kata “batal” otomatis dikelompokkan sebagai Dibatalkan. File upload dianggap sebagai snapshot lengkap seluruh minggu.</small>
+        <small>* Kolom wajib: Kode, Judul Pelatihan, dan Tanggal Mulai. Satu Kode hanya boleh muncul satu kali dalam file. Kode yang sudah ada di NeonDB akan diperbarui; Kode baru akan ditambahkan.</small>
       </div>
 
       <div class="modal-actions">
