@@ -2,7 +2,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS pelatihan (
     record_key text PRIMARY KEY,
-    kode text NOT NULL DEFAULT '-',
+    kode text NOT NULL,
     status_asli text NOT NULL DEFAULT '-',
     status_kategori text NOT NULL
         CHECK (status_kategori IN (
@@ -18,8 +18,13 @@ CREATE TABLE IF NOT EXISTS pelatihan (
     tanggal_mulai date NOT NULL,
     akhir_tm date,
     source_file text NOT NULL DEFAULT '',
-    imported_at timestamptz NOT NULL DEFAULT now()
+    imported_at timestamptz NOT NULL DEFAULT now(),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS pelatihan_kode_unique
+    ON pelatihan (kode);
 
 CREATE INDEX IF NOT EXISTS pelatihan_tanggal_mulai_idx
     ON pelatihan (tanggal_mulai);
