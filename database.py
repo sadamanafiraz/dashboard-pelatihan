@@ -61,14 +61,30 @@ def connect_db() -> Iterator[Connection[Any]]:
             raise DatabaseSchemaMissing(
                 "Tabel database belum dibuat. Jalankan file sql/001_init.sql di Neon SQL Editor."
             ) from exc
+        if isinstance(exc, (psycopg.errors.UndefinedColumn, psycopg.errors.InvalidColumnReference)):
+            raise DatabaseSchemaMissing(
+                "Schema database belum sesuai V5.6. Jalankan file sql/002_upsert_by_kode.sql di Neon SQL Editor."
+            ) from exc
         raise
 
 
 def ping_database() -> None:
     with connect_db() as connection:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT 1 AS ok")
-            cursor.fetchone()
+            cursor.execute("SELECT created_at, updated_at FROM pelatihan LIMIT 0")
+            cursor.execute(
+                """
+                SELECT 1
+                FROM pg_indexes
+                WHERE schemaname = current_schema()
+                  AND tablename = 'pelatihan'
+                  AND indexname = 'pelatihan_kode_unique'
+                """
+            )
+            if cursor.fetchone() is None:
+                raise DatabaseSchemaMissing(
+                    "Unique index Kode Diklat belum tersedia. Jalankan sql/002_upsert_by_kode.sql."
+                )
 
 
 def get_meta(connection: Connection[Any] | None = None) -> dict[str, Any]:
@@ -177,17 +193,18 @@ def fetch_trainings(
     return rows, note, meta
 
 
-def replace_trainings(
+def upsert_trainings(
     rows: list[dict[str, Any]],
     *,
     file_name: str,
     sheet_name: str,
     uploaded_at: datetime | None = None,
-) -> None:
-    """Replace the central dataset atomically with one uploaded snapshot."""
+) -> dict[str, int]:
+    """Insert new Kode Diklat and update existing ones without deleting history."""
 
     timestamp = uploaded_at or datetime.now(timezone.utc)
-    insert_sql = """
+    codes = [str(row["kode"]) for row in rows]
+    upsert_sql = """
         INSERT INTO pelatihan (
             record_key,
             kode,
@@ -201,7 +218,9 @@ def replace_trainings(
             tanggal_mulai,
             akhir_tm,
             source_file,
-            imported_at
+            imported_at,
+            created_at,
+            updated_at
         ) VALUES (
             %(record_key)s,
             %(kode)s,
@@ -215,8 +234,23 @@ def replace_trainings(
             %(tanggal_mulai)s,
             %(akhir_tm)s,
             %(source_file)s,
-            %(imported_at)s
+            %(imported_at)s,
+            %(created_at)s,
+            %(updated_at)s
         )
+        ON CONFLICT (kode) DO UPDATE SET
+            status_asli = EXCLUDED.status_asli,
+            status_kategori = EXCLUDED.status_kategori,
+            jenis_pelatihan = EXCLUDED.jenis_pelatihan,
+            pembiayaan = EXCLUDED.pembiayaan,
+            lokasi = EXCLUDED.lokasi,
+            jumlah_kelas = EXCLUDED.jumlah_kelas,
+            judul_pelatihan = EXCLUDED.judul_pelatihan,
+            tanggal_mulai = EXCLUDED.tanggal_mulai,
+            akhir_tm = EXCLUDED.akhir_tm,
+            source_file = EXCLUDED.source_file,
+            imported_at = EXCLUDED.imported_at,
+            updated_at = EXCLUDED.updated_at
     """
 
     records = [
@@ -224,16 +258,30 @@ def replace_trainings(
             **row,
             "source_file": file_name,
             "imported_at": timestamp,
+            "created_at": timestamp,
+            "updated_at": timestamp,
         }
         for row in rows
     ]
 
     with connect_db() as connection:
         with connection.cursor() as cursor:
-            # Readers see either the old dataset or the new dataset because both
-            # operations are committed in one transaction.
-            cursor.execute("DELETE FROM pelatihan")
-            cursor.executemany(insert_sql, records)
+            existing_codes: set[str] = set()
+            if codes:
+                cursor.execute(
+                    "SELECT kode FROM pelatihan WHERE kode = ANY(%s)",
+                    (codes,),
+                )
+                existing_codes = {str(row["kode"]) for row in cursor.fetchall()}
+
+            cursor.executemany(upsert_sql, records)
+
+            inserted_count = sum(1 for code in codes if code not in existing_codes)
+            updated_count = len(codes) - inserted_count
+
+            cursor.execute("SELECT COUNT(*)::int AS total FROM pelatihan")
+            total_database_rows = int(cursor.fetchone()["total"])
+
             cursor.execute(
                 """
                 INSERT INTO dashboard_meta (
@@ -245,9 +293,14 @@ def replace_trainings(
                     row_count = EXCLUDED.row_count,
                     uploaded_at = EXCLUDED.uploaded_at
                 """,
-                (file_name, sheet_name, len(rows), timestamp),
+                (file_name, sheet_name, total_database_rows, timestamp),
             )
 
+    return {
+        "inserted_count": inserted_count,
+        "updated_count": updated_count,
+        "total_database_rows": total_database_rows,
+    }
 
 def save_week_note(week_start: date, note: str) -> dict[str, Any]:
     cleaned = note.strip()[:500]

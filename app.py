@@ -24,7 +24,7 @@ from database import (
     fetch_trainings,
     list_weeks,
     ping_database,
-    replace_trainings,
+    upsert_trainings,
     save_week_note,
 )
 
@@ -35,7 +35,7 @@ ALLOWED_SUFFIXES = {".xlsx", ".xls", ".csv"}
 
 app = FastAPI(
     title="GIA Corpu Weekly Training",
-    version="5.0.0",
+    version="5.6.0",
     docs_url="/api/docs",
     redoc_url=None,
 )
@@ -78,7 +78,7 @@ COLUMN_ALIASES: dict[str, set[str]] = {
     },
 }
 
-REQUIRED_COLUMNS = {"judul_pelatihan", "tanggal_mulai"}
+REQUIRED_COLUMNS = {"kode", "judul_pelatihan", "tanggal_mulai"}
 ALL_ALIASES = set().union(*COLUMN_ALIASES.values())
 
 INDONESIAN_MONTHS = {
@@ -300,6 +300,7 @@ def prepare_dataframe(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str
     missing = REQUIRED_COLUMNS - set(mapping)
     if missing:
         readable = {
+            "kode": "Kode",
             "judul_pelatihan": "Judul Pelatihan",
             "tanggal_mulai": "Tanggal Mulai",
         }
@@ -322,8 +323,14 @@ def dataframe_to_rows(
 ) -> tuple[list[dict[str, Any]], list[str]]:
     rows: list[dict[str, Any]] = []
     invalid_date_count = 0
+    missing_code_count = 0
 
     for position, (_, source_row) in enumerate(data.iterrows(), start=1):
+        kode = clean_text(get_value(source_row, mapping, "kode"))
+        if not kode or kode == "-":
+            missing_code_count += 1
+            continue
+
         start_date = parse_date(get_value(source_row, mapping, "tanggal_mulai"))
         if not start_date:
             invalid_date_count += 1
@@ -333,7 +340,7 @@ def dataframe_to_rows(
         rows.append(
             {
                 "id": f"row-{position}",
-                "kode": clean_text(get_value(source_row, mapping, "kode")) or "-",
+                "kode": kode,
                 "status_asli": original_status or "-",
                 "status_kategori": normalize_status(original_status),
                 "jenis_pelatihan": clean_text(
@@ -358,30 +365,45 @@ def dataframe_to_rows(
             }
         )
 
+    seen: set[str] = set()
+    duplicates: list[str] = []
+    for row in rows:
+        kode = str(row["kode"])
+        if kode in seen and kode not in duplicates:
+            duplicates.append(kode)
+        seen.add(kode)
+
+    if duplicates:
+        preview = ", ".join(duplicates[:20])
+        suffix = "" if len(duplicates) <= 20 else f" dan {len(duplicates) - 20} kode lainnya"
+        raise ValueError(
+            "Terdapat Kode Diklat duplikat dalam file: "
+            f"{preview}{suffix}. Pastikan setiap Kode hanya muncul satu kali."
+        )
+
     warnings: list[str] = []
+    if missing_code_count:
+        warnings.append(
+            f"{missing_code_count} baris dilewati karena Kode Diklat kosong."
+        )
     if invalid_date_count:
         warnings.append(
             f"{invalid_date_count} baris dilewati karena Tanggal Mulai tidak valid."
         )
     if not rows:
-        raise ValueError("Tidak ada baris dengan Tanggal Mulai yang valid.")
+        raise ValueError(
+            "Tidak ada baris valid. Pastikan Kode Diklat dan Tanggal Mulai terisi."
+        )
 
-    rows.sort(key=lambda item: (item["tanggal_mulai"], item["judul_pelatihan"]))
+    rows.sort(key=lambda item: (item["tanggal_mulai"], item["kode"]))
     return rows, warnings
 
 
-def make_record_key(row: dict[str, Any], position: int) -> str:
-    """Create a deterministic key for one row in the uploaded snapshot."""
+def make_record_key(row: dict[str, Any]) -> str:
+    """Create a stable internal key for a new training based on Kode Diklat."""
 
-    parts = [
-        str(position),
-        str(row.get("kode", "")),
-        str(row.get("judul_pelatihan", "")),
-        str(row.get("tanggal_mulai", "")),
-        str(row.get("lokasi", "")),
-    ]
-    return hashlib.sha256("\x1f".join(parts).encode("utf-8")).hexdigest()
-
+    kode = str(row.get("kode", "")).strip()
+    return hashlib.sha256(f"kode:{kode}".encode("utf-8")).hexdigest()
 
 def week_start_for(value: date) -> date:
     return value - timedelta(days=value.weekday())
@@ -568,19 +590,18 @@ async def upload_training_data(file: UploadFile = File(...)) -> dict[str, Any]:
             detail=f"File tidak dapat diproses: {exc}",
         ) from exc
 
-    database_rows: list[dict[str, Any]] = []
-    for position, row in enumerate(rows, start=1):
-        database_rows.append(
-            {
-                **row,
-                "record_key": make_record_key(row, position),
-            }
-        )
+    database_rows: list[dict[str, Any]] = [
+        {
+            **row,
+            "record_key": make_record_key(row),
+        }
+        for row in rows
+    ]
 
     uploaded_at = datetime.now(timezone.utc)
     try:
-        await run_in_threadpool(
-            replace_trainings,
+        result = await run_in_threadpool(
+            upsert_trainings,
             database_rows,
             file_name=filename,
             sheet_name=sheet_name,
@@ -591,12 +612,19 @@ async def upload_training_data(file: UploadFile = File(...)) -> dict[str, Any]:
         raise AssertionError("unreachable")
 
     default_week = choose_default_week(rows)
+    skipped_count = max(len(data) - len(rows), 0)
     return {
-        "message": "Data berhasil disimpan ke NeonDB.",
+        "message": "Update data berhasil disimpan ke NeonDB.",
         "file_name": filename,
         "sheet_name": sheet_name,
         "uploaded_at": uploaded_at,
+        "source_row_count": len(data),
         "row_count": len(rows),
+        "processed_count": len(rows),
+        "inserted_count": int(result.get("inserted_count", 0)),
+        "updated_count": int(result.get("updated_count", 0)),
+        "skipped_count": skipped_count,
+        "total_database_rows": int(result.get("total_database_rows", 0)),
         "class_count": sum(int(row.get("jumlah_kelas") or 1) for row in rows),
         "default_week": default_week,
         "warnings": warnings,

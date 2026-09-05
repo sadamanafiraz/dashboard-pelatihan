@@ -1,273 +1,155 @@
-# Dashboard Pelatihan GIA Corpu/BPKP — NeonDB
+# GIA Corpu Weekly Training — V5.6
 
-Dashboard FastAPI untuk menampilkan data pelatihan mingguan yang tersimpan terpusat di Neon Postgres. Semua pengguna melihat dataset yang sama, dapat memilih minggu yang tersedia di database, dan melihat KPI, grafik, highlight, filter, serta daftar pelatihan lengkap.
+Dashboard FastAPI + Neon Postgres untuk menyajikan pelatihan mingguan secara terpusat. V5.6 mengubah mekanisme upload menjadi **UPSERT berdasarkan Kode Diklat** sehingga data minggu lama tidak lagi dihapus ketika file baru diunggah.
 
-## Fitur utama
+## Perubahan utama V5.6
 
-- Upload XLSX, XLS, atau CSV maksimal 4 MB.
-- Hasil upload disimpan ke NeonDB sebagai **snapshot lengkap**.
-- Pilihan minggu dibuat otomatis dari kolom `Tanggal Mulai` di database.
-- Dashboard otomatis memilih Minggu Depan, Minggu Ini, minggu terdekat di masa depan, atau minggu terakhir yang tersedia.
-- KPI kelas dan jumlah judul pelatihan.
-- Status dan tabel diurutkan: Akan Dilaksanakan → Dalam Konfirmasi → Dibatalkan, lalu Tanggal Mulai, lalu Kode.
-- Catatan highlight disimpan per minggu di NeonDB.
-- Kunci admin opsional untuk melindungi upload serta perubahan catatan.
-- Semua baris pada minggu terpilih ditampilkan dalam satu halaman.
+- `Kode` wajib dan menjadi **business key unik**.
+- Kode baru → **INSERT** data baru.
+- Kode yang sudah ada → **UPDATE** seluruh informasi selain Kode dan waktu pertama dibuat.
+- Data yang tidak ada di file terbaru → **tetap tersimpan** di NeonDB.
+- File dengan Kode duplikat → **ditolak** sebelum menyentuh database.
+- Baris dengan Kode kosong atau Tanggal Mulai tidak valid → dilewati dan dilaporkan.
+- Hasil upload menampilkan jumlah data baru, diperbarui, dilewati, dan total record database.
+- Dropdown minggu tetap dibentuk otomatis dari `Tanggal Mulai` seluruh data di NeonDB.
+- Tombol UI berubah menjadi **Update Data**.
 
-## Arsitektur
-
-```text
-Browser
-  ├─ GET /api/weeks
-  ├─ GET /api/trainings?week_start=YYYY-MM-DD
-  ├─ POST /api/upload
-  └─ PUT/DELETE /api/notes/{week_start}
-          ↓
-FastAPI di Vercel
-          ↓
-Neon Postgres
-```
-
-Data pelatihan tidak lagi disimpan sebagai dataset utama di `localStorage`. Browser hanya menyimpan preferensi minggu yang terakhir dipilih. Dataset dan catatan highlight bersumber dari NeonDB.
+Fitur V5.5 tetap dipertahankan: Export PNG HD tanpa sidebar, grafik jumlah kelas, highlight mingguan, sorting status/tanggal/kode, filter, pencarian, dan tampilan seluruh tabel dalam satu halaman.
 
 ## Struktur proyek
 
 ```text
-dashboard-pelatihan/
+dashboard-pelatihan-vercel-v5-6/
 ├── app.py
 ├── database.py
 ├── requirements.txt
 ├── vercel.json
 ├── .env.example
 ├── sql/
-│   └── 001_init.sql
+│   ├── 000_preflight_v56.sql
+│   ├── 001_init.sql
+│   └── 002_upsert_by_kode.sql
 ├── static/
 │   ├── index.html
 │   ├── styles.css
 │   └── app.js
 └── tests/
-    └── test_parser.py
 ```
 
-## 1. Membuat tabel di Neon
+## Upgrade dari V5.5
 
-Buka Neon Console, pilih project dan database, kemudian buka SQL Editor. Salin seluruh isi:
+### 1. Backup NeonDB
+
+Sebelum migrasi, buat branch/backup database Neon bila diperlukan.
+
+### 2. Cek kesiapan data
+
+Jalankan isi:
 
 ```text
-sql/001_init.sql
+sql/000_preflight_v56.sql
 ```
 
-Jalankan satu kali. Skrip tersebut membuat:
+Hasil ideal: kedua query tidak mengembalikan baris. Jika ada Kode kosong atau Kode duplikat, rapikan data tersebut terlebih dahulu.
 
-- `pelatihan` — data utama;
-- `dashboard_meta` — informasi file terakhir;
-- `pelatihan_week_notes` — catatan highlight per minggu;
-- indeks tanggal dan status.
+### 3. Jalankan migration
 
-## 2. Mengambil connection string
-
-Di Neon Console, klik **Connect** dan pilih connection string **pooled** untuk aplikasi. Simpan sebagai:
+Di Neon SQL Editor jalankan:
 
 ```text
-DATABASE_URL
+sql/002_upsert_by_kode.sql
 ```
 
-Contoh format:
+Migration akan:
 
-```text
-postgresql://USER:PASSWORD@HOST-pooler.REGION.aws.neon.tech/DBNAME?sslmode=require&channel_binding=require
-```
+- menambahkan `created_at`;
+- menambahkan `updated_at`;
+- menghapus default `'-'` pada `kode`;
+- membuat unique index `pelatihan_kode_unique`.
 
-Jangan menulis nilai tersebut langsung di source code atau mengunggah `.env` ke GitHub.
+Untuk database baru, cukup jalankan `sql/001_init.sql`.
 
-## 3. Environment variables di Vercel
-
-Buka:
-
-```text
-Vercel Project → Settings → Environment Variables
-```
-
-Tambahkan:
-
-```text
-DATABASE_URL=<pooled connection string Neon>
-ADMIN_UPLOAD_KEY=<kunci panjang dan acak>
-```
-
-`ADMIN_UPLOAD_KEY` bersifat opsional, tetapi sangat disarankan. Bila diisi, pengguna harus memasukkan kunci tersebut saat upload atau menyimpan catatan. Kunci tidak disimpan permanen oleh aplikasi; browser menyimpannya sementara di `sessionStorage`.
-
-Pilih environment yang diperlukan:
-
-- Production;
-- Preview;
-- Development, bila digunakan.
-
-Setelah mengubah environment variable, lakukan deployment baru atau redeploy.
-
-## 4. Menjalankan lokal
-
-Salin `.env.example` menjadi `.env`, lalu isi nilai sebenarnya.
-
-### Windows PowerShell
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-$env:DATABASE_URL="postgresql://..."
-$env:ADMIN_UPLOAD_KEY="kunci-admin"
-uvicorn app:app --reload
-```
-
-### macOS/Linux
+### 4. Push source code ke GitHub
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-export DATABASE_URL='postgresql://...'
-export ADMIN_UPLOAD_KEY='kunci-admin'
-uvicorn app:app --reload
-```
-
-Buka:
-
-```text
-http://127.0.0.1:8000
-```
-
-## 5. Deployment ke Vercel
-
-Pastikan file berikut berada di root repository:
-
-```text
-app.py
-database.py
-requirements.txt
-vercel.json
-static/
-sql/
-```
-
-Push ke branch Preview terlebih dahulu:
-
-```bash
-git checkout -b neon-dashboard
 git add .
-git commit -m "Hubungkan dashboard pelatihan ke NeonDB"
-git push -u origin neon-dashboard
+git commit -m "Update dashboard to V5.6 upsert by Kode Diklat"
+git push origin main
 ```
 
-Periksa Preview Deployment. Setelah benar, merge ke `main`.
+Jika repository terhubung ke Vercel, deployment baru akan dibuat otomatis.
 
-## Perilaku upload
+## Perilaku Update Data
 
-Upload baru menjalankan proses berikut dalam satu transaksi database:
+Contoh database sebelum upload:
 
-1. membaca dan menormalisasi file;
-2. menghapus dataset pelatihan sebelumnya;
-3. memasukkan seluruh baris dari file baru;
-4. memperbarui metadata file terakhir;
-5. commit.
-
-Karena itu, file upload harus berisi **seluruh data yang ingin dipertahankan**, termasuk semua minggu. Bila file hanya berisi satu minggu, minggu lain akan hilang dari tabel `pelatihan`.
-
-Catatan highlight tidak ikut dihapus ketika dataset diganti.
-
-## API
-
-### Daftar minggu
-
-```http
-GET /api/weeks
+```text
+101 | Pelatihan A | 31 Agu
+102 | Pelatihan B | 01 Sep
+103 | Pelatihan C | 02 Sep
 ```
 
-### Data satu minggu
+File baru:
 
-```http
-GET /api/trainings?week_start=2026-08-17
+```text
+102 | Pelatihan B revisi | 08 Sep
+104 | Pelatihan D        | 09 Sep
 ```
 
-Tanpa `week_start`, endpoint mengembalikan seluruh data.
+Hasil database:
 
-### Upload snapshot
-
-```http
-POST /api/upload
-X-Admin-Key: <ADMIN_UPLOAD_KEY>
-Content-Type: multipart/form-data
+```text
+101 | tetap
+102 | diperbarui
+103 | tetap
+104 | ditambahkan
 ```
 
-### Catatan highlight
+Tidak ada `DELETE FROM pelatihan` pada proses upload V5.6.
 
-```http
-PUT /api/notes/2026-08-17
-DELETE /api/notes/2026-08-17
-```
+## Aturan Kode Diklat
 
-### Pemeriksaan koneksi
+- Kolom `Kode` wajib ada pada file.
+- Nilai Kode tidak boleh kosong atau `-`.
+- Satu file tidak boleh memiliki Kode yang sama lebih dari satu kali.
+- Kode disimpan sebagai `TEXT`, sehingga nilai seperti `JFA-101` tetap didukung.
+- Sebaiknya Kode di Excel disimpan sebagai teks jika memiliki leading zero, misalnya `00123`.
 
-```http
-GET /api/health
-```
+## Response API upload
 
-Contoh hasil normal:
+`POST /api/upload` sekarang mengembalikan ringkasan seperti:
 
 ```json
 {
-  "status": "ok",
-  "database_configured": true,
-  "upload_protected": true,
-  "database": "connected"
+  "processed_count": 23,
+  "inserted_count": 18,
+  "updated_count": 4,
+  "skipped_count": 1,
+  "total_database_rows": 146
 }
 ```
 
-## Format kolom yang dikenali
+## Environment variables
 
-| Kolom | Wajib | Keterangan |
-|---|---:|---|
-| Kode | Tidak | Kode atau ID pelatihan |
-| Status | Tidak | Realisasi, Dalam Konfirmasi, Dibatalkan, dan variasinya |
-| Jenis Pelatihan | Tidak | Contoh JFA atau SN-FA |
-| Pembiayaan | Tidak | Contoh PNBP atau ABT |
-| Lokasi | Tidak | Lokasi atau unit penyelenggara |
-| Jumlah Kelas | Tidak | Bila kosong dianggap 1 |
-| Judul Pelatihan | Ya | Nama pelatihan |
-| Tanggal Mulai | Ya | Menentukan pengelompokan minggu |
-| Akhir TM | Tidak | Tanggal akhir program |
+```text
+DATABASE_URL=<Neon pooled connection string>
+ADMIN_UPLOAD_KEY=<kunci admin>
+```
 
-Minggu menggunakan rentang Senin sampai Minggu.
+## Pemeriksaan deployment
 
-## Troubleshooting
+Buka:
 
-### `DATABASE_URL belum dikonfigurasi`
+```text
+/api/health
+```
 
-Tambahkan `DATABASE_URL` di Vercel lalu deploy ulang.
+Jika migration V5.6 belum dijalankan, health endpoint akan memberi pesan agar menjalankan `sql/002_upsert_by_kode.sql`.
 
-### `Tabel database belum dibuat`
+## Testing lokal
 
-Jalankan `sql/001_init.sql` di Neon SQL Editor.
+```bash
+python -m pytest -q
+```
 
-### `Kunci admin tidak valid`
-
-Pastikan nilai yang dimasukkan sama dengan `ADMIN_UPLOAD_KEY` pada environment deployment yang sedang dibuka.
-
-### Preview kosong sedangkan Production berisi data
-
-Periksa `DATABASE_URL` pada environment Preview. Bila menggunakan Neon Preview Branching, Preview dapat terhubung ke branch database yang berbeda dari Production.
-
-### Upload menghapus minggu lain
-
-Ini adalah perilaku snapshot. Gabungkan seluruh minggu ke satu file sebelum upload, atau ubah fungsi `replace_trainings()` menjadi mode upsert bila alur kerja Anda memakai file inkremental.
-
-
-## Perubahan V5
-
-- Judul dashboard: **GIA Corpu Weekly Training**.
-- Tombol **Export PNG** berada di sidebar, di bawah Upload Data.
-- Export PNG menangkap seluruh area dashboard termasuk seluruh tabel, tetapi **tidak menyertakan sidebar/toolbar kiri**.
-- Grafik **Pelatihan per Lokasi** dan **Pelatihan per Jenis** dihitung berdasarkan **jumlah kelas**.
-- Label `(kelas)` ditampilkan secara lebih soft pada judul grafik.
-- Highlight **Kelas Terbanyak** menggunakan narasi, misalnya: `Pelatihan JFA mendominasi dengan 4 kelas.`
-- html2canvas 1.4.1 dimuat dari cdnjs untuk proses export PNG di browser.
+V5.6 memiliki pengujian parser, API, validasi Kode, duplikasi Kode, dan ringkasan UPSERT.
