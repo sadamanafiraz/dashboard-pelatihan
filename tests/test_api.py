@@ -78,12 +78,18 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(payload["week_end"], "2026-08-23")
         self.assertEqual(payload["note"], "Catatan minggu")
 
-    @patch("app.replace_trainings")
-    def test_upload_requires_key_and_persists_snapshot(self, mocked_replace) -> None:
+    @patch("app.upsert_trainings")
+    def test_upload_requires_key_and_returns_upsert_summary(self, mocked_upsert) -> None:
         os.environ["ADMIN_UPLOAD_KEY"] = "rahasia"
+        mocked_upsert.return_value = {
+            "inserted_count": 1,
+            "updated_count": 1,
+            "total_database_rows": 12,
+        }
         csv_data = (
             "Kode,Status,Judul Pelatihan,Tanggal Mulai,Jumlah Kelas\n"
             "10,Realisasi,Pelatihan A,20-Agu-2026,2\n"
+            "11,Dalam Konfirmasi,Pelatihan B,21-Agu-2026,1\n"
         ).encode("utf-8")
 
         unauthorized = self.client.post(
@@ -100,10 +106,88 @@ class ApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload["row_count"], 1)
-        self.assertEqual(payload["class_count"], 2)
+        self.assertEqual(payload["processed_count"], 2)
+        self.assertEqual(payload["inserted_count"], 1)
+        self.assertEqual(payload["updated_count"], 1)
+        self.assertEqual(payload["skipped_count"], 0)
+        self.assertEqual(payload["total_database_rows"], 12)
+        self.assertEqual(payload["class_count"], 3)
         self.assertEqual(payload["default_week"], "2026-08-17")
-        mocked_replace.assert_called_once()
+        mocked_upsert.assert_called_once()
+
+    @patch("app.update_training")
+    def test_direct_edit_requires_admin_key_and_updates_by_code(self, mocked_update) -> None:
+        os.environ["ADMIN_UPLOAD_KEY"] = "rahasia"
+        mocked_update.return_value = {
+            "id": "abc",
+            "kode": "744",
+            "status_asli": "Konfirmasi",
+            "status_kategori": "Dalam Konfirmasi",
+            "jenis_pelatihan": "JFA",
+            "pembiayaan": "PNBP",
+            "lokasi": "Pusdiklatwas",
+            "jumlah_kelas": 2,
+            "judul_pelatihan": "Pelatihan A",
+            "tanggal_mulai": date(2026, 9, 7),
+            "akhir_tm": date(2026, 9, 11),
+        }
+        payload = {
+            "status_asli": "Konfirmasi",
+            "jenis_pelatihan": "JFA",
+            "pembiayaan": "PNBP",
+            "lokasi": "Pusdiklatwas",
+            "jumlah_kelas": 2,
+            "judul_pelatihan": "Pelatihan A",
+            "tanggal_mulai": "2026-09-07",
+            "akhir_tm": "2026-09-11",
+        }
+
+        unauthorized = self.client.put("/api/trainings/744", json=payload)
+        self.assertEqual(unauthorized.status_code, 401)
+
+        response = self.client.put(
+            "/api/trainings/744",
+            headers={"X-Admin-Key": "rahasia"},
+            json=payload,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["row"]["status_kategori"], "Dalam Konfirmasi")
+        args, kwargs = mocked_update.call_args
+        self.assertEqual(args[0], "744")
+        self.assertEqual(args[1]["status_kategori"], "Dalam Konfirmasi")
+
+    @patch("app.update_training")
+    def test_direct_edit_rejects_location_outside_dropdown(self, mocked_update) -> None:
+        payload = {
+            "status_asli": "Realisasi",
+            "jenis_pelatihan": "JFA",
+            "pembiayaan": "Rupiah Murni",
+            "lokasi": "Lokasi Bebas",
+            "jumlah_kelas": 1,
+            "judul_pelatihan": "Pelatihan A",
+            "tanggal_mulai": "2026-09-07",
+            "akhir_tm": None,
+        }
+        response = self.client.put("/api/trainings/744", json=payload)
+        self.assertEqual(response.status_code, 422)
+        mocked_update.assert_not_called()
+
+    @patch("app.upsert_trainings")
+    def test_upload_rejects_duplicate_codes_before_database(self, mocked_upsert) -> None:
+        csv_data = (
+            "Kode,Status,Judul Pelatihan,Tanggal Mulai\n"
+            "10,Realisasi,Pelatihan A,20-Agu-2026\n"
+            "10,Realisasi,Pelatihan B,21-Agu-2026\n"
+        ).encode("utf-8")
+
+        response = self.client.post(
+            "/api/upload",
+            files={"file": ("duplicate.csv", csv_data, "text/csv")},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Kode Diklat duplikat", response.json()["detail"])
+        mocked_upsert.assert_not_called()
 
 
 if __name__ == "__main__":
