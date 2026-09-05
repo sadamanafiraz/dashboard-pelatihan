@@ -311,7 +311,7 @@
                 <th>Judul Pelatihan</th>
                 <th>Tanggal Mulai</th>
                 <th>Akhir TM</th>
-                <th><span class="sr-only">Detail</span></th>
+                <th class="admin-action-column"><span class="sr-only">Aksi</span></th>
               </tr>
             </thead>
             <tbody id="trainingTableBody"></tbody>
@@ -426,6 +426,118 @@
         <p id="detailSubtitle"></p>
       </div>
       <dl class="detail-grid" id="detailGrid"></dl>
+    </section>
+  </div>
+
+
+  <div class="modal" id="editModal" hidden>
+    <div class="modal-backdrop" data-close-edit></div>
+    <section class="modal-dialog edit-dialog" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+      <button class="modal-close" id="editCloseButton" type="button" aria-label="Tutup edit pelatihan">
+        <svg class="icon"><use href="#icon-close"></use></svg>
+      </button>
+      <div class="modal-heading">
+        <div class="modal-heading-icon"><svg class="icon"><use href="#icon-edit"></use></svg></div>
+        <div>
+          <h2 id="editModalTitle">Edit Data Pelatihan</h2>
+          <p>Perubahan disimpan langsung ke NeonDB. Kode Diklat tetap sebagai kunci data. Kolom pilihan menggunakan dropdown yang dapat dicari.</p>
+        </div>
+      </div>
+
+      <form id="editTrainingForm" class="edit-form">
+        <div class="edit-form-grid">
+          <label class="edit-field edit-field-locked">
+            <span>Kode Diklat</span>
+            <div class="locked-input-wrap">
+              <input id="editKode" type="text" readonly>
+              <span class="locked-badge">Kunci data</span>
+            </div>
+            <small>Kode tidak dapat diubah dari menu edit.</small>
+          </label>
+
+          <div class="edit-field">
+            <span>Status</span>
+            <div class="search-select" data-search-select="status">
+              <div class="search-select-control">
+                <svg class="search-select-icon icon"><use href="#icon-search"></use></svg>
+                <input id="editStatus" type="text" autocomplete="off" placeholder="Cari status..." role="combobox" aria-expanded="false">
+                <button class="search-select-toggle" type="button" aria-label="Buka pilihan status">⌄</button>
+              </div>
+              <div class="search-select-menu" data-menu hidden></div>
+            </div>
+          </div>
+
+          <div class="edit-field">
+            <span>Jenis Pelatihan</span>
+            <div class="search-select" data-search-select="jenis">
+              <div class="search-select-control">
+                <svg class="search-select-icon icon"><use href="#icon-search"></use></svg>
+                <input id="editJenis" type="text" autocomplete="off" placeholder="Cari jenis pelatihan..." role="combobox" aria-expanded="false">
+                <button class="search-select-toggle" type="button" aria-label="Buka pilihan jenis pelatihan">⌄</button>
+              </div>
+              <div class="search-select-menu" data-menu hidden></div>
+            </div>
+          </div>
+
+          <div class="edit-field">
+            <span>Pembiayaan</span>
+            <div class="search-select" data-search-select="pembiayaan">
+              <div class="search-select-control">
+                <svg class="search-select-icon icon"><use href="#icon-search"></use></svg>
+                <input id="editPembiayaan" type="text" autocomplete="off" placeholder="Cari sumber pembiayaan..." role="combobox" aria-expanded="false">
+                <button class="search-select-toggle" type="button" aria-label="Buka pilihan pembiayaan">⌄</button>
+              </div>
+              <div class="search-select-menu" data-menu hidden></div>
+            </div>
+          </div>
+
+          <div class="edit-field">
+            <span>Lokasi</span>
+            <div class="search-select" data-search-select="lokasi">
+              <div class="search-select-control">
+                <svg class="search-select-icon icon"><use href="#icon-search"></use></svg>
+                <input id="editLokasi" type="text" autocomplete="off" placeholder="Cari lokasi atau kota..." role="combobox" aria-expanded="false">
+                <button class="search-select-toggle" type="button" aria-label="Buka pilihan lokasi">⌄</button>
+              </div>
+              <div class="search-select-menu search-select-menu-tall" data-menu hidden></div>
+            </div>
+            <small>Termasuk lokasi GIA Corpu dan kota-kota di Indonesia.</small>
+          </div>
+
+          <label class="edit-field">
+            <span>Jumlah Kelas</span>
+            <input id="editJumlahKelas" type="number" min="1" max="999" step="1" required>
+          </label>
+
+          <label class="edit-field edit-field-wide">
+            <span>Judul Pelatihan</span>
+            <input id="editJudul" type="text" maxlength="500" required>
+          </label>
+
+          <label class="edit-field">
+            <span>Tanggal Mulai</span>
+            <input id="editTanggalMulai" type="date" required>
+          </label>
+
+          <label class="edit-field">
+            <span>Akhir TM</span>
+            <input id="editAkhirTm" type="date">
+          </label>
+        </div>
+
+        <div class="edit-info-strip">
+          <svg class="icon"><use href="#icon-info"></use></svg>
+          <span>Jika Tanggal Mulai dipindahkan ke minggu lain, pelatihan otomatis berpindah ke periode tersebut pada dashboard.</span>
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary-button" id="cancelEditButton" type="button">Batal</button>
+          <button class="primary-button" id="saveEditButton" type="submit">
+            <svg class="icon"><use href="#icon-check"></use></svg>
+            Simpan Perubahan
+          </button>
+        </div>
+      </form>
     </section>
   </div>
 
