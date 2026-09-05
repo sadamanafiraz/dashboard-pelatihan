@@ -1,22 +1,10 @@
-# Update V5.5 → V5.6 di NeonDB + Vercel
+# Update Vercel ke V5.8
 
-1. Backup/branch database Neon Production.
-2. Jalankan `sql/000_preflight_v56.sql`.
-3. Pastikan tidak ada Kode kosong/`-` dan tidak ada Kode duplikat.
-4. Jalankan `sql/002_upsert_by_kode.sql`.
-5. Replace source code repository dengan V5.6.
-6. Commit dan push ke GitHub.
-7. Tunggu deployment Vercel selesai.
-8. Buka `/api/health`; pastikan `status: ok` dan `database: connected`.
-9. Uji **Update Data** dengan file kecil yang berisi:
-   - satu Kode lama dengan informasi yang diubah;
-   - satu Kode baru.
-10. Pastikan Kode lama ter-update, Kode baru bertambah, dan data lain tetap ada.
+Jika project V5.6/V5.5 sudah terhubung ke GitHub, cukup replace source code dengan V5.8 lalu push ke branch Production (`main`).
 
-## Perintah Git
+Environment Variables yang tetap dibutuhkan:
 
-```bash
-git add .
-git commit -m "Update dashboard V5.6 - upsert by Kode Diklat"
-git push origin main
-```
+- `DATABASE_URL` — pooled connection string NeonDB
+- `ADMIN_UPLOAD_KEY` — kunci untuk upload, edit data, dan catatan highlight
+
+V5.8 tidak membutuhkan migration database baru di atas migration V5.6 (`002_upsert_by_kode.sql`).

@@ -8,7 +8,7 @@ import unicodedata
 from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pandas as pd
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
@@ -25,6 +25,7 @@ from database import (
     list_weeks,
     ping_database,
     upsert_trainings,
+    update_training,
     save_week_note,
 )
 
@@ -35,7 +36,7 @@ ALLOWED_SUFFIXES = {".xlsx", ".xls", ".csv"}
 
 app = FastAPI(
     title="GIA Corpu Weekly Training",
-    version="5.6.0",
+    version="5.8.0",
     docs_url="/api/docs",
     redoc_url=None,
 )
@@ -80,6 +81,32 @@ COLUMN_ALIASES: dict[str, set[str]] = {
 
 REQUIRED_COLUMNS = {"kode", "judul_pelatihan", "tanggal_mulai"}
 ALL_ALIASES = set().union(*COLUMN_ALIASES.values())
+
+
+
+EDIT_STATUS_OPTIONS = {"Realisasi", "Konfirmasi", "Batal", "Mundur"}
+EDIT_TYPE_OPTIONS = {"JFA", "SN-FA", "TS Was", "TS Manwas"}
+EDIT_FUNDING_OPTIONS = {"Rupiah Murni", "PNBP", "STAR", "ABT"}
+EDIT_LOCATION_OPTIONS = {
+    "Pusdiklatwas", "Balai Medan", "Balai Bali", "Balai Makassar",
+    "Ambon", "Balikpapan", "Banda Aceh", "Bandar Lampung", "Bandung", "Banjar",
+    "Banjarbaru", "Banjarmasin", "Batam", "Batu", "Baubau", "Bekasi", "Bengkulu",
+    "Bima", "Binjai", "Bitung", "Blitar", "Bogor", "Bontang", "Bukittinggi",
+    "Cilegon", "Cimahi", "Cirebon", "Denpasar", "Depok", "Dumai", "Gorontalo",
+    "Gunungsitoli", "Jakarta Barat", "Jakarta Pusat", "Jakarta Selatan",
+    "Jakarta Timur", "Jakarta Utara", "Jambi", "Jayapura", "Kediri", "Kendari",
+    "Kotamobagu", "Kupang", "Langsa", "Lhokseumawe", "Lubuklinggau", "Madiun",
+    "Magelang", "Makassar", "Malang", "Manado", "Mataram", "Medan", "Metro",
+    "Mojokerto", "Padang", "Padang Panjang", "Padangsidimpuan", "Pagar Alam",
+    "Palangka Raya", "Palembang", "Palopo", "Palu", "Pangkalpinang", "Parepare",
+    "Pariaman", "Pasuruan", "Payakumbuh", "Pekalongan", "Pekanbaru",
+    "Pematangsiantar", "Pontianak", "Prabumulih", "Probolinggo", "Sabang",
+    "Salatiga", "Samarinda", "Sawahlunto", "Semarang", "Serang", "Sibolga",
+    "Singkawang", "Solok", "Sorong", "Subulussalam", "Sukabumi", "Sungai Penuh",
+    "Surabaya", "Surakarta", "Tangerang", "Tangerang Selatan", "Tanjungbalai",
+    "Tanjungpinang", "Tarakan", "Tasikmalaya", "Tebing Tinggi", "Tegal", "Ternate",
+    "Tidore Kepulauan", "Tomohon", "Tual", "Yogyakarta",
+}
 
 INDONESIAN_MONTHS = {
     "januari": "January",
@@ -465,6 +492,17 @@ class WeekNotePayload(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
+class TrainingUpdatePayload(BaseModel):
+    status_asli: Literal["Realisasi", "Konfirmasi", "Batal", "Mundur"]
+    jenis_pelatihan: Literal["JFA", "SN-FA", "TS Was", "TS Manwas"]
+    pembiayaan: Literal["Rupiah Murni", "PNBP", "STAR", "ABT"]
+    lokasi: str = Field(min_length=1, max_length=100)
+    jumlah_kelas: int = Field(ge=1, le=999)
+    judul_pelatihan: str = Field(min_length=1, max_length=500)
+    tanggal_mulai: date
+    akhir_tm: date | None = None
+
+
 @app.get("/", include_in_schema=False)
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
@@ -521,6 +559,56 @@ def training_data(
         "note": note,
         "meta": meta,
         "upload_protected": upload_is_protected(),
+    }
+
+
+
+
+@app.put(
+    "/api/trainings/{kode}",
+    dependencies=[Depends(require_admin_key)],
+)
+def edit_training_data(kode: str, payload: TrainingUpdatePayload) -> dict[str, Any]:
+    cleaned_code = kode.strip()
+    if not cleaned_code:
+        raise HTTPException(status_code=400, detail="Kode Diklat tidak valid.")
+    if payload.lokasi not in EDIT_LOCATION_OPTIONS:
+        raise HTTPException(
+            status_code=422,
+            detail="Lokasi harus dipilih dari daftar lokasi yang tersedia.",
+        )
+    if payload.akhir_tm is not None and payload.akhir_tm < payload.tanggal_mulai:
+        raise HTTPException(
+            status_code=422,
+            detail="Akhir TM tidak boleh lebih awal dari Tanggal Mulai.",
+        )
+
+    timestamp = datetime.now(timezone.utc)
+    values = {
+        "status_asli": payload.status_asli,
+        "status_kategori": normalize_status(payload.status_asli),
+        "jenis_pelatihan": payload.jenis_pelatihan,
+        "pembiayaan": payload.pembiayaan,
+        "lokasi": payload.lokasi,
+        "jumlah_kelas": payload.jumlah_kelas,
+        "judul_pelatihan": payload.judul_pelatihan.strip(),
+        "tanggal_mulai": payload.tanggal_mulai,
+        "akhir_tm": payload.akhir_tm,
+    }
+
+    try:
+        row = update_training(cleaned_code, values, updated_at=timestamp)
+    except Exception as exc:
+        raise_database_http_error(exc)
+        raise AssertionError("unreachable")
+
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Kode Diklat {cleaned_code} tidak ditemukan.")
+
+    return {
+        "message": f"Kode Diklat {cleaned_code} berhasil diperbarui.",
+        "row": row,
+        "updated_at": timestamp,
     }
 
 

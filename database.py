@@ -302,6 +302,63 @@ def upsert_trainings(
         "total_database_rows": total_database_rows,
     }
 
+
+def update_training(
+    kode: str,
+    values: dict[str, Any],
+    *,
+    updated_at: datetime | None = None,
+) -> dict[str, Any] | None:
+    """Update one training by Kode Diklat without allowing the business key to change."""
+
+    timestamp = updated_at or datetime.now(timezone.utc)
+    with connect_db() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE pelatihan
+                SET
+                    status_asli = %(status_asli)s,
+                    status_kategori = %(status_kategori)s,
+                    jenis_pelatihan = %(jenis_pelatihan)s,
+                    pembiayaan = %(pembiayaan)s,
+                    lokasi = %(lokasi)s,
+                    jumlah_kelas = %(jumlah_kelas)s,
+                    judul_pelatihan = %(judul_pelatihan)s,
+                    tanggal_mulai = %(tanggal_mulai)s,
+                    akhir_tm = %(akhir_tm)s,
+                    updated_at = %(updated_at)s
+                WHERE kode = %(kode)s
+                RETURNING
+                    record_key AS id,
+                    kode,
+                    status_asli,
+                    status_kategori,
+                    jenis_pelatihan,
+                    pembiayaan,
+                    lokasi,
+                    jumlah_kelas,
+                    judul_pelatihan,
+                    tanggal_mulai,
+                    akhir_tm
+                """,
+                {**values, "kode": kode, "updated_at": timestamp},
+            )
+            row = cursor.fetchone()
+            if row is None:
+                return None
+
+            cursor.execute(
+                """
+                UPDATE dashboard_meta
+                SET uploaded_at = %s
+                WHERE id = 1
+                """,
+                (timestamp,),
+            )
+
+    return dict(row)
+
 def save_week_note(week_start: date, note: str) -> dict[str, Any]:
     cleaned = note.strip()[:500]
     with connect_db() as connection:
