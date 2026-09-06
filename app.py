@@ -20,7 +20,9 @@ from starlette.concurrency import run_in_threadpool
 from database import (
     DatabaseNotConfigured,
     DatabaseSchemaMissing,
+    delete_training,
     delete_week_note,
+    fetch_training_by_code,
     fetch_trainings,
     list_weeks,
     ping_database,
@@ -36,7 +38,7 @@ ALLOWED_SUFFIXES = {".xlsx", ".xls", ".csv"}
 
 app = FastAPI(
     title="GIA Corpu Weekly Training",
-    version="5.8.0",
+    version="5.10.0",
     docs_url="/api/docs",
     redoc_url=None,
 )
@@ -492,14 +494,16 @@ class WeekNotePayload(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
-class TrainingUpdatePayload(BaseModel):
-    status_asli: Literal["Realisasi", "Konfirmasi", "Batal", "Mundur"]
-    jenis_pelatihan: Literal["JFA", "SN-FA", "TS Was", "TS Manwas"]
-    pembiayaan: Literal["Rupiah Murni", "PNBP", "STAR", "ABT"]
-    lokasi: str = Field(min_length=1, max_length=100)
-    jumlah_kelas: int = Field(ge=1, le=999)
-    judul_pelatihan: str = Field(min_length=1, max_length=500)
-    tanggal_mulai: date
+class TrainingPatchPayload(BaseModel):
+    """Partial edit payload. Omitted fields stay unchanged; nullable fields may be cleared."""
+
+    status_asli: Literal["Realisasi", "Konfirmasi", "Batal", "Mundur"] | None = None
+    jenis_pelatihan: Literal["JFA", "SN-FA", "TS Was", "TS Manwas"] | None = None
+    pembiayaan: Literal["Rupiah Murni", "PNBP", "STAR", "ABT"] | None = None
+    lokasi: str | None = Field(default=None, max_length=100)
+    jumlah_kelas: int | None = Field(default=None, ge=1, le=999)
+    judul_pelatihan: str | None = Field(default=None, max_length=500)
+    tanggal_mulai: date | None = None
     akhir_tm: date | None = None
 
 
@@ -564,40 +568,70 @@ def training_data(
 
 
 
-@app.put(
+@app.patch(
     "/api/trainings/{kode}",
     dependencies=[Depends(require_admin_key)],
 )
-def edit_training_data(kode: str, payload: TrainingUpdatePayload) -> dict[str, Any]:
+def edit_training_data(kode: str, payload: TrainingPatchPayload) -> dict[str, Any]:
     cleaned_code = kode.strip()
     if not cleaned_code:
         raise HTTPException(status_code=400, detail="Kode Diklat tidak valid.")
-    if payload.lokasi not in EDIT_LOCATION_OPTIONS:
-        raise HTTPException(
-            status_code=422,
-            detail="Lokasi harus dipilih dari daftar lokasi yang tersedia.",
-        )
-    if payload.akhir_tm is not None and payload.akhir_tm < payload.tanggal_mulai:
+
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="Tidak ada perubahan untuk disimpan.")
+
+    non_nullable = {
+        "status_asli": "Status",
+        "jumlah_kelas": "Jumlah Kelas",
+        "judul_pelatihan": "Judul Pelatihan",
+        "tanggal_mulai": "Tanggal Mulai",
+    }
+    for field_name, label in non_nullable.items():
+        if field_name in updates and updates[field_name] is None:
+            raise HTTPException(status_code=422, detail=f"{label} tidak boleh dikosongkan.")
+
+    if "judul_pelatihan" in updates:
+        title = str(updates["judul_pelatihan"] or "").strip()
+        if not title:
+            raise HTTPException(status_code=422, detail="Judul Pelatihan tidak boleh dikosongkan.")
+        updates["judul_pelatihan"] = title
+
+    if "lokasi" in updates and updates["lokasi"] is not None:
+        location = str(updates["lokasi"]).strip()
+        if not location:
+            updates["lokasi"] = None
+        elif location not in EDIT_LOCATION_OPTIONS:
+            raise HTTPException(
+                status_code=422,
+                detail="Lokasi harus dipilih dari daftar lokasi yang tersedia atau dikosongkan.",
+            )
+        else:
+            updates["lokasi"] = location
+
+    if "status_asli" in updates:
+        updates["status_kategori"] = normalize_status(updates["status_asli"])
+
+    try:
+        current = fetch_training_by_code(cleaned_code)
+    except Exception as exc:
+        raise_database_http_error(exc)
+        raise AssertionError("unreachable")
+
+    if current is None:
+        raise HTTPException(status_code=404, detail=f"Kode Diklat {cleaned_code} tidak ditemukan.")
+
+    effective_start = updates.get("tanggal_mulai", current.get("tanggal_mulai"))
+    effective_end = updates.get("akhir_tm", current.get("akhir_tm"))
+    if effective_end is not None and effective_start is not None and effective_end < effective_start:
         raise HTTPException(
             status_code=422,
             detail="Akhir TM tidak boleh lebih awal dari Tanggal Mulai.",
         )
 
     timestamp = datetime.now(timezone.utc)
-    values = {
-        "status_asli": payload.status_asli,
-        "status_kategori": normalize_status(payload.status_asli),
-        "jenis_pelatihan": payload.jenis_pelatihan,
-        "pembiayaan": payload.pembiayaan,
-        "lokasi": payload.lokasi,
-        "jumlah_kelas": payload.jumlah_kelas,
-        "judul_pelatihan": payload.judul_pelatihan.strip(),
-        "tanggal_mulai": payload.tanggal_mulai,
-        "akhir_tm": payload.akhir_tm,
-    }
-
     try:
-        row = update_training(cleaned_code, values, updated_at=timestamp)
+        row = update_training(cleaned_code, updates, updated_at=timestamp)
     except Exception as exc:
         raise_database_http_error(exc)
         raise AssertionError("unreachable")
@@ -605,9 +639,39 @@ def edit_training_data(kode: str, payload: TrainingUpdatePayload) -> dict[str, A
     if row is None:
         raise HTTPException(status_code=404, detail=f"Kode Diklat {cleaned_code} tidak ditemukan.")
 
+    changed_fields = [field for field in updates if field != "status_kategori"]
     return {
         "message": f"Kode Diklat {cleaned_code} berhasil diperbarui.",
         "row": row,
+        "changed_fields": changed_fields,
+        "updated_at": timestamp,
+    }
+
+
+@app.delete(
+    "/api/trainings/{kode}",
+    dependencies=[Depends(require_admin_key)],
+)
+def remove_training_data(kode: str) -> dict[str, Any]:
+    cleaned_code = kode.strip()
+    if not cleaned_code:
+        raise HTTPException(status_code=400, detail="Kode Diklat tidak valid.")
+
+    timestamp = datetime.now(timezone.utc)
+    try:
+        result = delete_training(cleaned_code, deleted_at=timestamp)
+    except Exception as exc:
+        raise_database_http_error(exc)
+        raise AssertionError("unreachable")
+
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Kode Diklat {cleaned_code} tidak ditemukan.")
+
+    return {
+        "message": f"Kode Diklat {cleaned_code} berhasil dihapus.",
+        "deleted_kode": cleaned_code,
+        "deleted_title": result.get("judul_pelatihan", ""),
+        "total_database_rows": result.get("total_database_rows", 0),
         "updated_at": timestamp,
     }
 

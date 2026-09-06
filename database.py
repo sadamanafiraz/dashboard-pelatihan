@@ -193,6 +193,34 @@ def fetch_trainings(
     return rows, note, meta
 
 
+def fetch_training_by_code(kode: str) -> dict[str, Any] | None:
+    """Fetch one training by its immutable business key."""
+
+    with connect_db() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    record_key AS id,
+                    kode,
+                    status_asli,
+                    status_kategori,
+                    jenis_pelatihan,
+                    pembiayaan,
+                    lokasi,
+                    jumlah_kelas,
+                    judul_pelatihan,
+                    tanggal_mulai,
+                    akhir_tm
+                FROM pelatihan
+                WHERE kode = %s
+                """,
+                (kode,),
+            )
+            row = cursor.fetchone()
+    return dict(row) if row else None
+
+
 def upsert_trainings(
     rows: list[dict[str, Any]],
     *,
@@ -309,25 +337,40 @@ def update_training(
     *,
     updated_at: datetime | None = None,
 ) -> dict[str, Any] | None:
-    """Update one training by Kode Diklat without allowing the business key to change."""
+    """Partially update one training by Kode Diklat.
+
+    Only a strict whitelist of editable columns is accepted. Omitted columns are
+    untouched, while nullable columns may explicitly be set to NULL.
+    """
+
+    editable_columns = {
+        "status_asli",
+        "status_kategori",
+        "jenis_pelatihan",
+        "pembiayaan",
+        "lokasi",
+        "jumlah_kelas",
+        "judul_pelatihan",
+        "tanggal_mulai",
+        "akhir_tm",
+    }
+    updates = {key: value for key, value in values.items() if key in editable_columns}
+    if not updates:
+        return fetch_training_by_code(kode)
 
     timestamp = updated_at or datetime.now(timezone.utc)
+    set_clause = ",\n                    ".join(
+        [f"{column} = %({column})s" for column in updates] + ["updated_at = %(updated_at)s"]
+    )
+    parameters = {**updates, "kode": kode, "updated_at": timestamp}
+
     with connect_db() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 UPDATE pelatihan
                 SET
-                    status_asli = %(status_asli)s,
-                    status_kategori = %(status_kategori)s,
-                    jenis_pelatihan = %(jenis_pelatihan)s,
-                    pembiayaan = %(pembiayaan)s,
-                    lokasi = %(lokasi)s,
-                    jumlah_kelas = %(jumlah_kelas)s,
-                    judul_pelatihan = %(judul_pelatihan)s,
-                    tanggal_mulai = %(tanggal_mulai)s,
-                    akhir_tm = %(akhir_tm)s,
-                    updated_at = %(updated_at)s
+                    {set_clause}
                 WHERE kode = %(kode)s
                 RETURNING
                     record_key AS id,
@@ -342,7 +385,7 @@ def update_training(
                     tanggal_mulai,
                     akhir_tm
                 """,
-                {**values, "kode": kode, "updated_at": timestamp},
+                parameters,
             )
             row = cursor.fetchone()
             if row is None:
@@ -358,6 +401,44 @@ def update_training(
             )
 
     return dict(row)
+
+
+def delete_training(
+    kode: str,
+    *,
+    deleted_at: datetime | None = None,
+) -> dict[str, Any] | None:
+    """Delete exactly one training by Kode Diklat and refresh dashboard metadata."""
+
+    timestamp = deleted_at or datetime.now(timezone.utc)
+    with connect_db() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                DELETE FROM pelatihan
+                WHERE kode = %s
+                RETURNING kode, judul_pelatihan
+                """,
+                (kode,),
+            )
+            deleted = cursor.fetchone()
+            if deleted is None:
+                return None
+
+            cursor.execute("SELECT COUNT(*)::int AS total FROM pelatihan")
+            total_row = cursor.fetchone()
+            total = int(total_row["total"] if total_row else 0)
+            cursor.execute(
+                """
+                UPDATE dashboard_meta
+                SET row_count = %s, uploaded_at = %s
+                WHERE id = 1
+                """,
+                (total, timestamp),
+            )
+
+    return {**dict(deleted), "total_database_rows": total}
+
 
 def save_week_note(week_start: date, note: str) -> dict[str, Any]:
     cleaned = note.strip()[:500]
