@@ -67,6 +67,9 @@
     <symbol id="icon-edit" viewBox="0 0 24 24">
       <path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path>
     </symbol>
+    <symbol id="icon-trash" viewBox="0 0 24 24">
+      <path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="m7 7 1 14h8l1-14"></path><path d="M10 11v6M14 11v6"></path>
+    </symbol>
     <symbol id="icon-note" viewBox="0 0 24 24">
       <path d="M5 3h14a2 2 0 0 1 2 2v10l-6 6H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"></path><path d="M14 21v-5a1 1 0 0 1 1-1h6M7 8h10M7 12h7"></path>
     </symbol>
@@ -440,7 +443,7 @@
         <div class="modal-heading-icon"><svg class="icon"><use href="#icon-edit"></use></svg></div>
         <div>
           <h2 id="editModalTitle">Edit Data Pelatihan</h2>
-          <p>Perubahan disimpan langsung ke NeonDB. Kode Diklat tetap sebagai kunci data. Kolom pilihan menggunakan dropdown yang dapat dicari.</p>
+          <p>Ubah hanya kolom yang diperlukan. Kolom yang tidak disentuh tidak akan diubah di NeonDB. Kode Diklat tetap sebagai kunci data.</p>
         </div>
       </div>
 
@@ -455,8 +458,8 @@
             <small>Kode tidak dapat diubah dari menu edit.</small>
           </label>
 
-          <div class="edit-field">
-            <span>Status</span>
+          <div class="edit-field" data-edit-field="status_asli">
+            <div class="edit-field-label-row"><span>Status <span class="edit-change-badge">Diubah</span></span></div>
             <div class="search-select" data-search-select="status">
               <div class="search-select-control">
                 <svg class="search-select-icon icon"><use href="#icon-search"></use></svg>
@@ -467,8 +470,11 @@
             </div>
           </div>
 
-          <div class="edit-field">
-            <span>Jenis Pelatihan</span>
+          <div class="edit-field" data-edit-field="jenis_pelatihan">
+            <div class="edit-field-label-row">
+              <span>Jenis Pelatihan <span class="edit-change-badge">Diubah</span></span>
+              <button class="edit-clear-button" type="button" data-clear-edit="editJenis">Kosongkan</button>
+            </div>
             <div class="search-select" data-search-select="jenis">
               <div class="search-select-control">
                 <svg class="search-select-icon icon"><use href="#icon-search"></use></svg>
@@ -479,8 +485,11 @@
             </div>
           </div>
 
-          <div class="edit-field">
-            <span>Pembiayaan</span>
+          <div class="edit-field" data-edit-field="pembiayaan">
+            <div class="edit-field-label-row">
+              <span>Pembiayaan <span class="edit-change-badge">Diubah</span></span>
+              <button class="edit-clear-button" type="button" data-clear-edit="editPembiayaan">Kosongkan</button>
+            </div>
             <div class="search-select" data-search-select="pembiayaan">
               <div class="search-select-control">
                 <svg class="search-select-icon icon"><use href="#icon-search"></use></svg>
@@ -491,8 +500,11 @@
             </div>
           </div>
 
-          <div class="edit-field">
-            <span>Lokasi</span>
+          <div class="edit-field" data-edit-field="lokasi">
+            <div class="edit-field-label-row">
+              <span>Lokasi <span class="edit-change-badge">Diubah</span></span>
+              <button class="edit-clear-button" type="button" data-clear-edit="editLokasi">Kosongkan</button>
+            </div>
             <div class="search-select" data-search-select="lokasi">
               <div class="search-select-control">
                 <svg class="search-select-icon icon"><use href="#icon-search"></use></svg>
@@ -504,40 +516,84 @@
             <small>Termasuk lokasi GIA Corpu dan kota-kota di Indonesia.</small>
           </div>
 
-          <label class="edit-field">
-            <span>Jumlah Kelas</span>
-            <input id="editJumlahKelas" type="number" min="1" max="999" step="1" required>
+          <label class="edit-field" data-edit-field="jumlah_kelas">
+            <span>Jumlah Kelas <span class="edit-change-badge">Diubah</span></span>
+            <input id="editJumlahKelas" type="number" min="1" max="999" step="1">
           </label>
 
-          <label class="edit-field edit-field-wide">
-            <span>Judul Pelatihan</span>
-            <input id="editJudul" type="text" maxlength="500" required>
+          <label class="edit-field edit-field-wide" data-edit-field="judul_pelatihan">
+            <span>Judul Pelatihan <span class="edit-change-badge">Diubah</span></span>
+            <input id="editJudul" type="text" maxlength="500">
           </label>
 
-          <label class="edit-field">
-            <span>Tanggal Mulai</span>
-            <input id="editTanggalMulai" type="date" required>
+          <label class="edit-field" data-edit-field="tanggal_mulai">
+            <span>Tanggal Mulai <span class="edit-change-badge">Diubah</span></span>
+            <input id="editTanggalMulai" type="date">
           </label>
 
-          <label class="edit-field">
-            <span>Akhir TM</span>
+          <label class="edit-field" data-edit-field="akhir_tm">
+            <div class="edit-field-label-row">
+              <span>Akhir TM <span class="edit-change-badge">Diubah</span></span>
+              <button class="edit-clear-button" type="button" data-clear-edit="editAkhirTm">Kosongkan</button>
+            </div>
             <input id="editAkhirTm" type="date">
           </label>
         </div>
 
         <div class="edit-info-strip">
           <svg class="icon"><use href="#icon-info"></use></svg>
-          <span>Jika Tanggal Mulai dipindahkan ke minggu lain, pelatihan otomatis berpindah ke periode tersebut pada dashboard.</span>
+          <span>Anda dapat mengubah hanya 1–2 kolom lalu langsung simpan. Tombol <b>Kosongkan</b> menghapus nilai pada kolom opsional saja.</span>
+        </div>
+        <div class="edit-save-summary" id="editSaveSummary">
+          <span>Belum ada perubahan.</span>
+          <strong id="editChangeCount">0 kolom</strong>
         </div>
 
-        <div class="modal-actions">
-          <button class="secondary-button" id="cancelEditButton" type="button">Batal</button>
-          <button class="primary-button" id="saveEditButton" type="submit">
-            <svg class="icon"><use href="#icon-check"></use></svg>
-            Simpan Perubahan
+        <div class="modal-actions edit-modal-actions">
+          <button class="delete-training-button" id="deleteTrainingButton" type="button">
+            <svg class="icon"><use href="#icon-trash"></use></svg>
+            Hapus Diklat
           </button>
+          <div class="edit-modal-actions-right">
+            <button class="secondary-button" id="cancelEditButton" type="button">Batal</button>
+            <button class="primary-button" id="saveEditButton" type="submit">
+              <svg class="icon"><use href="#icon-check"></use></svg>
+              Simpan Perubahan
+            </button>
+          </div>
         </div>
       </form>
+    </section>
+  </div>
+
+  <div class="modal" id="deleteTrainingModal" hidden>
+    <div class="modal-backdrop" data-close-delete-training></div>
+    <section class="modal-dialog delete-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteTrainingTitle">
+      <button class="modal-close" id="deleteTrainingCloseButton" type="button" aria-label="Tutup konfirmasi hapus">
+        <svg class="icon"><use href="#icon-close"></use></svg>
+      </button>
+      <div class="modal-heading">
+        <div class="modal-heading-icon delete-heading-icon"><svg class="icon"><use href="#icon-trash"></use></svg></div>
+        <div>
+          <h2 id="deleteTrainingTitle">Hapus Data Pelatihan?</h2>
+          <p>Data akan dihapus berdasarkan Kode Diklat dan tidak lagi tampil pada seluruh periode dashboard.</p>
+        </div>
+      </div>
+      <div class="delete-warning-box">
+        <svg class="icon"><use href="#icon-info"></use></svg>
+        <div><strong>Tindakan ini tidak dapat dibatalkan.</strong><br>Pastikan Kode Diklat yang dipilih memang ingin dihapus dari NeonDB.</div>
+      </div>
+      <dl class="delete-target-card">
+        <dt>Kode Diklat</dt><dd id="deleteTrainingKode">-</dd>
+        <dt>Pelatihan</dt><dd id="deleteTrainingName">-</dd>
+      </dl>
+      <div class="modal-actions">
+        <button class="secondary-button" id="cancelDeleteTrainingButton" type="button">Batal</button>
+        <button class="danger-primary-button" id="confirmDeleteTrainingButton" type="button">
+          <svg class="icon"><use href="#icon-trash"></use></svg>
+          Ya, Hapus Diklat
+        </button>
+      </div>
     </section>
   </div>
 

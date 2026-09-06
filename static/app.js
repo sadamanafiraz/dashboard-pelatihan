@@ -25,7 +25,9 @@ const state = {
   databaseConnected: false,
   uploadProtected: false,
   loading: false,
-  editingKode: ""
+  editingKode: "",
+  editingOriginal: null,
+  deletingKode: ""
 };
 
 const elements = {};
@@ -48,7 +50,9 @@ function cacheElements() {
     "detailCloseButton", "detailStatus", "detailTitle", "detailSubtitle", "detailGrid",
     "editModal", "editCloseButton", "editTrainingForm", "editKode", "editStatus", "editJenis",
     "editPembiayaan", "editLokasi", "editJumlahKelas", "editJudul", "editTanggalMulai",
-    "editAkhirTm", "cancelEditButton", "saveEditButton", "toast"
+    "editAkhirTm", "editSaveSummary", "editChangeCount", "cancelEditButton", "saveEditButton",
+    "deleteTrainingButton", "deleteTrainingModal", "deleteTrainingCloseButton", "deleteTrainingKode",
+    "deleteTrainingName", "cancelDeleteTrainingButton", "confirmDeleteTrainingButton", "toast"
   ];
 
   ids.forEach((id) => {
@@ -1005,14 +1009,6 @@ function initSearchSelects() {
   });
 }
 
-function ensureAllowedSelectValue(inputId, options, label) {
-  const input = document.getElementById(inputId);
-  if (!input || options.includes(input.value)) return true;
-  showToast(`${label} harus dipilih dari daftar.`, "error");
-  input.focus();
-  return false;
-}
-
 function canonicalEditStatus(row) {
   if (editSelectOptions.status.includes(row.status_asli)) return row.status_asli;
   if (row.status_kategori === "Dibatalkan") return "Batal";
@@ -1020,27 +1016,123 @@ function canonicalEditStatus(row) {
   return "Realisasi";
 }
 
+function editSnapshotFromInputs() {
+  return {
+    status_asli: elements.editStatus.value,
+    jenis_pelatihan: elements.editJenis.value,
+    pembiayaan: elements.editPembiayaan.value,
+    lokasi: elements.editLokasi.value,
+    jumlah_kelas: elements.editJumlahKelas.value === "" ? "" : Number(elements.editJumlahKelas.value),
+    judul_pelatihan: elements.editJudul.value.trim(),
+    tanggal_mulai: elements.editTanggalMulai.value,
+    akhir_tm: elements.editAkhirTm.value
+  };
+}
+
+function comparableEditValue(value) {
+  return value === null || value === undefined ? "" : value;
+}
+
+function getEditChanges() {
+  const original = state.editingOriginal || {};
+  const current = editSnapshotFromInputs();
+  const changes = {};
+  Object.entries(current).forEach(([key, value]) => {
+    if (String(comparableEditValue(value)) !== String(comparableEditValue(original[key]))) {
+      changes[key] = value;
+    }
+  });
+  return changes;
+}
+
+function updateEditChangeState() {
+  const changes = getEditChanges();
+  const keys = new Set(Object.keys(changes));
+  document.querySelectorAll("[data-edit-field]").forEach((field) => {
+    field.classList.toggle("is-changed", keys.has(field.dataset.editField));
+  });
+  const count = keys.size;
+  if (elements.editChangeCount) elements.editChangeCount.textContent = `${count} kolom`;
+  if (elements.editSaveSummary) {
+    const label = elements.editSaveSummary.querySelector("span");
+    if (label) label.textContent = count
+      ? `${count} perubahan siap disimpan. Kolom lain tetap seperti semula.`
+      : "Belum ada perubahan.";
+  }
+  elements.saveEditButton.disabled = count === 0;
+}
+
 function showEditModal(row) {
   state.editingKode = String(row.kode || "");
   elements.editKode.value = state.editingKode;
   elements.editStatus.value = canonicalEditStatus(row);
-  elements.editJenis.value = row.jenis_pelatihan || "";
-  elements.editPembiayaan.value = row.pembiayaan || "";
-  elements.editLokasi.value = row.lokasi || "";
+  elements.editJenis.value = row.jenis_pelatihan && row.jenis_pelatihan !== "Lainnya" ? row.jenis_pelatihan : "";
+  elements.editPembiayaan.value = row.pembiayaan && row.pembiayaan !== "-" ? row.pembiayaan : "";
+  elements.editLokasi.value = row.lokasi && row.lokasi !== "Belum ditentukan" ? row.lokasi : "";
   elements.editJumlahKelas.value = String(getClassCount(row));
   elements.editJudul.value = row.judul_pelatihan || "";
   elements.editTanggalMulai.value = row.tanggal_mulai || "";
   elements.editAkhirTm.value = row.akhir_tm || "";
+  state.editingOriginal = editSnapshotFromInputs();
   elements.editModal.hidden = false;
   document.body.style.overflow = "hidden";
+  updateEditChangeState();
   window.setTimeout(() => elements.editStatus.focus(), 80);
 }
 
 function closeEditModal() {
   elements.editModal.hidden = true;
   state.editingKode = "";
+  state.editingOriginal = null;
   document.querySelectorAll(".search-select.open").forEach(closeSearchSelect);
-  document.body.style.overflow = "";
+  if (elements.deleteTrainingModal.hidden) document.body.style.overflow = "";
+}
+
+function openDeleteTrainingModal() {
+  const kode = state.editingKode;
+  if (!kode) return;
+  const row = state.rows.find((item) => String(item.kode) === String(kode));
+  if (!row) {
+    showToast("Data pelatihan tidak ditemukan.", "error");
+    return;
+  }
+  state.deletingKode = kode;
+  elements.deleteTrainingKode.textContent = kode;
+  elements.deleteTrainingName.textContent = row.judul_pelatihan || "-";
+  elements.deleteTrainingModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeDeleteTrainingModal() {
+  elements.deleteTrainingModal.hidden = true;
+  state.deletingKode = "";
+  if (elements.editModal.hidden) document.body.style.overflow = "";
+}
+
+async function confirmDeleteTraining() {
+  const kode = state.deletingKode;
+  if (!kode) return;
+  const button = elements.confirmDeleteTrainingButton;
+  const originalHtml = button.innerHTML;
+  button.disabled = true;
+  button.textContent = "Menghapus...";
+
+  try {
+    await requestJson(`/api/trainings/${encodeURIComponent(kode)}`, {
+      method: "DELETE",
+      headers: adminHeaders({ promptIfMissing: true })
+    });
+    closeDeleteTrainingModal();
+    closeEditModal();
+    const preferredPeriod = state.periodPreset;
+    await loadWeeksFromDatabase(preferredPeriod);
+    showToast(`Kode Diklat ${kode} berhasil dihapus dari NeonDB.`);
+  } catch (error) {
+    showToast(error.message || "Data gagal dihapus.", "error");
+  } finally {
+    button.disabled = false;
+    button.innerHTML = originalHtml;
+  }
 }
 
 async function saveTrainingEdit(event) {
@@ -1048,48 +1140,86 @@ async function saveTrainingEdit(event) {
   const kode = state.editingKode;
   if (!kode) return;
 
-  if (!ensureAllowedSelectValue("editStatus", editSelectOptions.status, "Status") ||
-      !ensureAllowedSelectValue("editJenis", editSelectOptions.jenis, "Jenis Pelatihan") ||
-      !ensureAllowedSelectValue("editPembiayaan", editSelectOptions.pembiayaan, "Pembiayaan") ||
-      !ensureAllowedSelectValue("editLokasi", editSelectOptions.lokasi, "Lokasi")) {
+  const changes = getEditChanges();
+  if (!Object.keys(changes).length) {
+    showToast("Belum ada perubahan untuk disimpan.");
     return;
   }
 
-  const jumlahKelas = Number(elements.editJumlahKelas.value);
-  const payload = {
-    status_asli: elements.editStatus.value,
-    jenis_pelatihan: elements.editJenis.value,
-    pembiayaan: elements.editPembiayaan.value,
-    lokasi: elements.editLokasi.value,
-    jumlah_kelas: Number.isFinite(jumlahKelas) && jumlahKelas > 0 ? Math.floor(jumlahKelas) : 1,
-    judul_pelatihan: elements.editJudul.value.trim(),
-    tanggal_mulai: elements.editTanggalMulai.value,
-    akhir_tm: elements.editAkhirTm.value || null
-  };
+  if (Object.prototype.hasOwnProperty.call(changes, "status_asli")) {
+    if (!changes.status_asli || !editSelectOptions.status.includes(changes.status_asli)) {
+      showToast("Status harus dipilih dari daftar.", "error");
+      elements.editStatus.focus();
+      return;
+    }
+  }
 
-  if (!payload.judul_pelatihan || !payload.tanggal_mulai) {
-    showToast("Judul Pelatihan dan Tanggal Mulai wajib diisi.", "error");
+  for (const [key, inputId, options, label] of [
+    ["jenis_pelatihan", "editJenis", editSelectOptions.jenis, "Jenis Pelatihan"],
+    ["pembiayaan", "editPembiayaan", editSelectOptions.pembiayaan, "Pembiayaan"],
+    ["lokasi", "editLokasi", editSelectOptions.lokasi, "Lokasi"]
+  ]) {
+    if (!Object.prototype.hasOwnProperty.call(changes, key)) continue;
+    const value = String(changes[key] ?? "").trim();
+    if (value && !options.includes(value)) {
+      showToast(`${label} harus dipilih dari daftar atau dikosongkan.`, "error");
+      document.getElementById(inputId)?.focus();
+      return;
+    }
+    changes[key] = value || null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(changes, "jumlah_kelas")) {
+    const value = Number(changes.jumlah_kelas);
+    if (!Number.isFinite(value) || value < 1 || value > 999) {
+      showToast("Jumlah Kelas harus antara 1 dan 999.", "error");
+      elements.editJumlahKelas.focus();
+      return;
+    }
+    changes.jumlah_kelas = Math.floor(value);
+  }
+  if (Object.prototype.hasOwnProperty.call(changes, "judul_pelatihan") && !changes.judul_pelatihan) {
+    showToast("Judul Pelatihan tidak boleh dikosongkan.", "error");
+    elements.editJudul.focus();
     return;
   }
-  if (payload.akhir_tm && payload.akhir_tm < payload.tanggal_mulai) {
+  if (Object.prototype.hasOwnProperty.call(changes, "tanggal_mulai") && !changes.tanggal_mulai) {
+    showToast("Tanggal Mulai tidak boleh dikosongkan.", "error");
+    elements.editTanggalMulai.focus();
+    return;
+  }
+  if (Object.prototype.hasOwnProperty.call(changes, "akhir_tm")) {
+    changes.akhir_tm = changes.akhir_tm || null;
+  }
+
+  const effectiveStart = Object.prototype.hasOwnProperty.call(changes, "tanggal_mulai")
+    ? changes.tanggal_mulai
+    : state.editingOriginal.tanggal_mulai;
+  const effectiveEnd = Object.prototype.hasOwnProperty.call(changes, "akhir_tm")
+    ? changes.akhir_tm
+    : (state.editingOriginal.akhir_tm || null);
+  if (effectiveEnd && effectiveStart && effectiveEnd < effectiveStart) {
     showToast("Akhir TM tidak boleh lebih awal dari Tanggal Mulai.", "error");
+    elements.editAkhirTm.focus();
     return;
   }
 
+  const changedCount = Object.keys(changes).length;
   elements.saveEditButton.disabled = true;
   try {
     await requestJson(`/api/trainings/${encodeURIComponent(kode)}`, {
-      method: "PUT",
+      method: "PATCH",
       headers: adminHeaders({ includeJson: true, promptIfMissing: true }),
-      body: JSON.stringify(payload)
+      body: JSON.stringify(changes)
     });
 
     closeEditModal();
     const preferredPeriod = state.periodPreset;
     await loadWeeksFromDatabase(preferredPeriod);
-    showToast(`Kode ${kode} berhasil diperbarui langsung di NeonDB.`);
+    showToast(`${changedCount} kolom pada Kode ${kode} berhasil diperbarui.`);
   } catch (error) {
     showToast(error.message || "Perubahan gagal disimpan.", "error");
+    updateEditChangeState();
   } finally {
     elements.saveEditButton.disabled = false;
   }
@@ -1273,11 +1403,36 @@ function attachEvents() {
 
   elements.editCloseButton.addEventListener("click", closeEditModal);
   elements.cancelEditButton.addEventListener("click", closeEditModal);
+  elements.deleteTrainingButton.addEventListener("click", openDeleteTrainingModal);
+  elements.deleteTrainingCloseButton.addEventListener("click", closeDeleteTrainingModal);
+  elements.cancelDeleteTrainingButton.addEventListener("click", closeDeleteTrainingModal);
+  elements.confirmDeleteTrainingButton.addEventListener("click", confirmDeleteTraining);
+  document.querySelectorAll("[data-close-delete-training]").forEach((element) => {
+    element.addEventListener("click", closeDeleteTrainingModal);
+  });
   elements.editTrainingForm.addEventListener("submit", saveTrainingEdit);
   document.querySelectorAll("[data-close-edit]").forEach((element) => {
     element.addEventListener("click", closeEditModal);
   });
   initSearchSelects();
+
+  [elements.editStatus, elements.editJenis, elements.editPembiayaan, elements.editLokasi,
+   elements.editJumlahKelas, elements.editJudul, elements.editTanggalMulai, elements.editAkhirTm]
+    .filter(Boolean)
+    .forEach((input) => {
+      input.addEventListener("input", updateEditChangeState);
+      input.addEventListener("change", updateEditChangeState);
+    });
+
+  document.querySelectorAll("[data-clear-edit]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const input = document.getElementById(button.dataset.clearEdit);
+      if (!input) return;
+      input.value = "";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.focus();
+    });
+  });
 
   elements.chooseFileButton.addEventListener("click", () => elements.fileInput.click());
   elements.fileInput.addEventListener("change", (event) => uploadFile(event.target.files?.[0]));
@@ -1303,7 +1458,8 @@ function attachEvents() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
-    if (!elements.editModal.hidden) closeEditModal();
+    if (!elements.deleteTrainingModal.hidden) closeDeleteTrainingModal();
+    else if (!elements.editModal.hidden) closeEditModal();
     else if (!elements.detailModal.hidden) closeDetailModal();
     else if (!elements.highlightModal.hidden) closeHighlightModal();
     else if (!elements.uploadModal.hidden) closeUploadModal();
