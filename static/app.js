@@ -39,7 +39,7 @@ function cacheElements() {
     "lastUpdated", "exportPngButton", "changeDataButton", "kpiTotal", "kpiTotalTrainingCount", "kpiScheduled",
     "kpiScheduledTrainingCount", "kpiConfirmation", "kpiCancelled",
     "confirmationProgress", "cancelledProgress", "confirmationPercent", "cancelledPercent",
-    "donutSegments", "donutTotal", "locationLegend", "typeBars", "highlightType",
+    "locationMapMarkers", "locationMapTotal", "locationMapList", "locationUnmapped", "locationUnmappedChips", "typeBars", "highlightType",
     "highlightLocation", "highlightEditButton", "highlightCustomText", "customHighlightItem",
     "customHighlightDivider", "datasetLabel", "statusFilter", "locationFilter", "searchInput",
     "trainingTableBody", "emptyTable", "paginationInfo", "uploadModal", "uploadCloseButton",
@@ -348,43 +348,220 @@ function renderKpis() {
   elements.cancelledProgress.style.width = `${cancelledPct}%`;
 }
 
+const CITY_COORDINATES = Object.freeze({
+  "Ambon": [-3.6954, 128.1814], "Balikpapan": [-1.2379, 116.8529], "Banda Aceh": [5.5483, 95.3238],
+  "Bandar Lampung": [-5.3971, 105.2668], "Bandung": [-6.9175, 107.6191], "Banjar": [-7.369, 108.541],
+  "Banjarbaru": [-3.442, 114.832], "Banjarmasin": [-3.3186, 114.5944], "Batam": [1.0456, 104.0305],
+  "Batu": [-7.871, 112.526], "Baubau": [-5.463, 122.611], "Bekasi": [-6.2383, 106.9756],
+  "Bengkulu": [-3.7928, 102.2608], "Bima": [-8.46, 118.727], "Binjai": [3.6001, 98.4854],
+  "Bitung": [1.4451, 125.1824], "Blitar": [-8.0955, 112.1609], "Bogor": [-6.5971, 106.806],
+  "Bontang": [0.1324, 117.485], "Bukittinggi": [-0.3052, 100.3692], "Cilegon": [-6.0025, 106.0111],
+  "Cimahi": [-6.8722, 107.542], "Cirebon": [-6.732, 108.5523], "Denpasar": [-8.65, 115.2167],
+  "Depok": [-6.4025, 106.7942], "Dumai": [1.6666, 101.4002], "Gorontalo": [0.5435, 123.0568],
+  "Gunungsitoli": [1.2805, 97.6147], "Jakarta Barat": [-6.1683, 106.7589], "Jakarta Pusat": [-6.1865, 106.8341],
+  "Jakarta Selatan": [-6.2615, 106.8106], "Jakarta Timur": [-6.225, 106.9004], "Jakarta Utara": [-6.1384, 106.8637],
+  "Jambi": [-1.6101, 103.6131], "Jayapura": [-2.5916, 140.669], "Kediri": [-7.8169, 112.0114],
+  "Kendari": [-3.9985, 122.512], "Kotamobagu": [0.733, 124.317], "Kupang": [-10.1772, 123.607],
+  "Langsa": [4.4683, 97.9683], "Lhokseumawe": [5.1801, 97.1507], "Lubuklinggau": [-3.2967, 102.8617],
+  "Madiun": [-7.6297, 111.5239], "Magelang": [-7.4797, 110.2177], "Makassar": [-5.1477, 119.4327],
+  "Malang": [-7.9666, 112.6326], "Manado": [1.4748, 124.8421], "Mataram": [-8.5833, 116.1167],
+  "Medan": [3.5952, 98.6722], "Metro": [-5.1131, 105.3067], "Mojokerto": [-7.4722, 112.4336],
+  "Padang": [-0.9471, 100.4172], "Padang Panjang": [-0.4707, 100.4059], "Padangsidimpuan": [1.3795, 99.2718],
+  "Pagar Alam": [-4.025, 103.246], "Palangka Raya": [-2.2161, 113.9136], "Palembang": [-2.9761, 104.7754],
+  "Palopo": [-3.0, 120.2], "Palu": [-0.8986, 119.8506], "Pangkalpinang": [-2.1291, 106.1138],
+  "Parepare": [-4.0135, 119.6255], "Pariaman": [-0.6268, 100.117], "Pasuruan": [-7.6469, 112.899],
+  "Payakumbuh": [-0.2289, 100.6323], "Pekalongan": [-6.8898, 109.6746], "Pekanbaru": [0.5071, 101.4478],
+  "Pematangsiantar": [2.97, 99.0682], "Pontianak": [-0.0263, 109.3425], "Prabumulih": [-3.432, 104.235],
+  "Probolinggo": [-7.7543, 113.2159], "Sabang": [5.8933, 95.3214], "Salatiga": [-7.3305, 110.5084],
+  "Samarinda": [-0.5022, 117.1536], "Sawahlunto": [-0.681, 100.776], "Semarang": [-6.9667, 110.4167],
+  "Serang": [-6.12, 106.1503], "Sibolga": [1.7427, 98.7792], "Singkawang": [0.906, 108.987],
+  "Solok": [-0.803, 100.644], "Sorong": [-0.876, 131.2558], "Subulussalam": [2.642, 98.004],
+  "Sukabumi": [-6.9277, 106.929], "Sungai Penuh": [-2.063, 101.396], "Surabaya": [-7.2575, 112.7521],
+  "Surakarta": [-7.5666, 110.8167], "Tangerang": [-6.1783, 106.6319], "Tangerang Selatan": [-6.2886, 106.7179],
+  "Tanjungbalai": [2.966, 99.799], "Tanjungpinang": [0.9186, 104.4665], "Tarakan": [3.3, 117.6333],
+  "Tasikmalaya": [-7.3506, 108.2172], "Tebing Tinggi": [3.3285, 99.1625], "Tegal": [-6.8797, 109.1256],
+  "Ternate": [0.7906, 127.3842], "Tidore Kepulauan": [0.674, 127.404], "Tomohon": [1.326, 124.838],
+  "Tual": [-5.6667, 132.75], "Yogyakarta": [-7.7956, 110.3695]
+});
+
+const LOCATION_ALIASES = Object.freeze({
+  "pusdiklatwas": { label: "Kab. Bogor", city: "Bogor", detail: "Pusdiklatwas" },
+  "kab bogor": { label: "Kab. Bogor", city: "Bogor", detail: "Kab. Bogor" },
+  "kab. bogor": { label: "Kab. Bogor", city: "Bogor", detail: "Kab. Bogor" },
+  "kab/kota bogor": { label: "Kab. Bogor", city: "Bogor", detail: "Kab/Kota Bogor" },
+  "ciawi": { label: "Kab. Bogor", city: "Bogor", detail: "Ciawi" },
+  "balai medan": { label: "Medan", city: "Medan", detail: "Balai Medan" },
+  "balai bali": { label: "Denpasar", city: "Denpasar", detail: "Balai Bali" },
+  "balai denpasar": { label: "Denpasar", city: "Denpasar", detail: "Balai Denpasar" },
+  "balai makassar": { label: "Makassar", city: "Makassar", detail: "Balai Makassar" },
+  "balai yogyakarta": { label: "Yogyakarta", city: "Yogyakarta", detail: "Balai Yogyakarta" },
+  "balai balikpapan": { label: "Balikpapan", city: "Balikpapan", detail: "Balai Balikpapan" }
+});
+
+function normalizeLocationKey(value) {
+  return String(value || "")
+    .trim()
+    .toLocaleLowerCase("id-ID")
+    .replace(/[._]/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function isNonGeographicLocation(value) {
+  const key = normalizeLocationKey(value);
+  return !key || ["-", "lainnya", "lokasi lainnya", "other", "others", "pjj", "virtual", "pjj/virtual", "pjj (virtual)"].includes(key)
+    || key.includes("jarak jauh") || key.includes("online") || key.includes("daring");
+}
+
+function resolveLocation(value) {
+  const raw = String(value || "").trim();
+  if (isNonGeographicLocation(raw)) {
+    const key = normalizeLocationKey(raw);
+    if (!key || key === "-") return { mapped: false, label: "Lokasi belum diisi", detail: "" };
+    if (key.includes("pjj") || key.includes("virtual") || key.includes("jarak jauh") || key.includes("online") || key.includes("daring")) {
+      return { mapped: false, label: "PJJ / Virtual", detail: raw };
+    }
+    return { mapped: false, label: "Lainnya", detail: raw };
+  }
+
+  const key = normalizeLocationKey(raw);
+  const alias = LOCATION_ALIASES[key];
+  if (alias && CITY_COORDINATES[alias.city]) {
+    return { mapped: true, label: alias.label, detail: alias.detail, coords: CITY_COORDINATES[alias.city] };
+  }
+
+  const exactCity = Object.keys(CITY_COORDINATES).find((city) => normalizeLocationKey(city) === key);
+  if (exactCity) return { mapped: true, label: exactCity, detail: raw, coords: CITY_COORDINATES[exactCity] };
+
+  const cityContained = Object.keys(CITY_COORDINATES)
+    .sort((a, b) => b.length - a.length)
+    .find((city) => key.includes(normalizeLocationKey(city)));
+  if (cityContained) return { mapped: true, label: cityContained, detail: raw, coords: CITY_COORDINATES[cityContained] };
+
+  return { mapped: false, label: raw || "Lokasi belum diisi", detail: raw };
+}
+
+function projectIndonesiaPoint(lat, lon) {
+  const minLon = 94, maxLon = 141, minLat = -11, maxLat = 6;
+  const x = 30 + ((lon - minLon) / (maxLon - minLon)) * 940;
+  const y = 35 + ((maxLat - lat) / (maxLat - minLat)) * 285;
+  return { x: Math.max(24, Math.min(976, x)), y: Math.max(28, Math.min(326, y)) };
+}
+
+function buildLocationGroups(rows) {
+  const mapped = new Map();
+  const unmapped = new Map();
+
+  rows.forEach((row) => {
+    const resolved = resolveLocation(row.lokasi);
+    const classes = getClassCount(row);
+    const target = resolved.mapped ? mapped : unmapped;
+    const groupKey = resolved.mapped ? resolved.label : resolved.label;
+    if (!target.has(groupKey)) target.set(groupKey, { ...resolved, value: 0 });
+    target.get(groupKey).value += classes;
+  });
+
+  return {
+    mapped: [...mapped.values()].sort((a, b) => b.value - a.value || a.label.localeCompare(b.label, "id-ID")),
+    unmapped: [...unmapped.values()].sort((a, b) => b.value - a.value || a.label.localeCompare(b.label, "id-ID"))
+  };
+}
+
 function renderLocationChart() {
   const rows = getPeriodRows();
   const total = sumClasses(rows);
-  const groups = compactGroups(countClassesBy(rows, "lokasi"), 5);
-  const radius = 56;
-  const circumference = 2 * Math.PI * radius;
-  let offset = 0;
-
-  elements.donutTotal.textContent = String(total);
-  elements.donutSegments.replaceChildren();
+  const { mapped, unmapped } = buildLocationGroups(rows);
+  elements.locationMapTotal.textContent = String(total);
+  elements.locationMapMarkers.replaceChildren();
 
   if (!total) {
-    elements.locationLegend.innerHTML = '<div class="empty-chart">Belum ada data lokasi pada periode ini.</div>';
+    elements.locationMapList.innerHTML = '<div class="empty-chart">Belum ada data lokasi pada periode ini.</div>';
+    elements.locationUnmapped.hidden = true;
     return;
   }
 
-  groups.forEach((item, index) => {
-    const rawLength = (item.value / total) * circumference;
-    const segmentLength = Math.max(rawLength - 1.8, 0.5);
-    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    circle.setAttribute("class", "donut-segment");
-    circle.setAttribute("cx", "80");
-    circle.setAttribute("cy", "80");
+  const maximum = Math.max(...mapped.map((item) => item.value), 1);
+  const svgNS = "http://www.w3.org/2000/svg";
+  mapped.forEach((item, index) => {
+    const [lat, lon] = item.coords;
+    const point = projectIndonesiaPoint(lat, lon);
+    const radius = 6 + Math.sqrt(item.value / maximum) * 10;
+    const color = LOCATION_COLORS[index % LOCATION_COLORS.length];
+    const marker = document.createElementNS(svgNS, "g");
+    marker.setAttribute("class", "map-marker");
+    marker.setAttribute("transform", `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`);
+    marker.setAttribute("tabindex", "0");
+    marker.setAttribute("role", "img");
+    marker.setAttribute("aria-label", `${item.label}, ${item.value} kelas`);
+
+    const halo = document.createElementNS(svgNS, "circle");
+    halo.setAttribute("class", "map-marker-halo");
+    halo.setAttribute("r", String(radius + 6));
+    halo.setAttribute("fill", color);
+    marker.appendChild(halo);
+
+    const circle = document.createElementNS(svgNS, "circle");
+    circle.setAttribute("class", "map-marker-dot");
     circle.setAttribute("r", String(radius));
-    circle.setAttribute("stroke", LOCATION_COLORS[index % LOCATION_COLORS.length]);
-    circle.setAttribute("stroke-dasharray", `${segmentLength} ${circumference - segmentLength}`);
-    circle.setAttribute("stroke-dashoffset", String(-offset));
-    elements.donutSegments.appendChild(circle);
-    offset += rawLength;
+    circle.setAttribute("fill", color);
+    marker.appendChild(circle);
+
+    const count = document.createElementNS(svgNS, "text");
+    count.setAttribute("class", "map-marker-count");
+    count.setAttribute("text-anchor", "middle");
+    count.setAttribute("dy", "0.35em");
+    count.textContent = String(item.value);
+    marker.appendChild(count);
+
+    const title = document.createElementNS(svgNS, "title");
+    title.textContent = `${item.label}: ${item.value} kelas${item.detail && item.detail !== item.label ? ` (${item.detail})` : ""}`;
+    marker.appendChild(title);
+
+    if (mapped.length <= 8 || index < 6) {
+      const labelGroup = document.createElementNS(svgNS, "g");
+      labelGroup.setAttribute("class", "map-marker-label");
+      const toLeft = point.x > 720;
+      const labelX = toLeft ? -(radius + 10) : radius + 10;
+      const anchor = toLeft ? "end" : "start";
+
+      const label = document.createElementNS(svgNS, "text");
+      label.setAttribute("x", String(labelX));
+      label.setAttribute("y", String(-radius - 2));
+      label.setAttribute("text-anchor", anchor);
+      label.textContent = item.label;
+      labelGroup.appendChild(label);
+
+      const value = document.createElementNS(svgNS, "text");
+      value.setAttribute("x", String(labelX));
+      value.setAttribute("y", String(-radius + 12));
+      value.setAttribute("text-anchor", anchor);
+      value.setAttribute("class", "map-marker-label-value");
+      value.textContent = `${item.value} kelas`;
+      labelGroup.appendChild(value);
+      marker.appendChild(labelGroup);
+    }
+
+    elements.locationMapMarkers.appendChild(marker);
   });
 
-  elements.locationLegend.innerHTML = groups.map((item, index) => `
-    <div class="legend-item" title="${escapeAttribute(item.label)}">
-      <span class="legend-dot" style="background:${LOCATION_COLORS[index % LOCATION_COLORS.length]}"></span>
-      <span class="legend-label">${escapeHtml(item.label)}</span>
-      <span class="legend-value">(${item.value})</span>
-    </div>
+  elements.locationMapList.innerHTML = mapped.length
+    ? mapped.map((item, index) => `
+      <div class="location-map-list-item" title="${escapeAttribute(item.detail || item.label)}">
+        <span class="location-map-color" style="background:${LOCATION_COLORS[index % LOCATION_COLORS.length]}"></span>
+        <span class="location-map-name">
+          <strong>${escapeHtml(item.label)}</strong>
+          ${item.detail && item.detail !== item.label ? `<small>${escapeHtml(item.detail)}</small>` : ""}
+        </span>
+        <span class="location-map-value"><strong>${item.value}</strong><small>kelas</small></span>
+      </div>
+    `).join("")
+    : '<div class="empty-chart">Tidak ada lokasi geografis yang dapat dipetakan.</div>';
+
+  elements.locationUnmapped.hidden = unmapped.length === 0;
+  elements.locationUnmappedChips.innerHTML = unmapped.map((item) => `
+    <span class="unmapped-location-chip" title="${escapeAttribute(item.detail || item.label)}">
+      <strong>${escapeHtml(item.label)}</strong>
+      <span>${item.value} kelas</span>
+    </span>
   `).join("");
 }
 

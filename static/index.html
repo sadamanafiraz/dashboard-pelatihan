@@ -202,24 +202,72 @@
 
       <section class="analytics-grid" aria-label="Analisis pelatihan">
         <article class="panel location-panel">
-          <div class="panel-heading">
+          <div class="panel-heading location-map-heading">
             <div>
               <svg class="icon"><use href="#icon-pin"></use></svg>
-              <h2>Pelatihan per Lokasi <span class="panel-unit">(kelas)</span></h2>
-            </div>
-          </div>
-          <div class="donut-layout">
-            <div class="donut-wrap" id="locationDonut" aria-label="Diagram pelatihan per lokasi">
-              <svg viewBox="0 0 160 160" role="img">
-                <circle class="donut-track" cx="80" cy="80" r="56"></circle>
-                <g id="donutSegments" transform="rotate(-90 80 80)"></g>
-              </svg>
-              <div class="donut-center">
-                <strong id="donutTotal">0</strong>
-                <span>Total</span>
+              <div>
+                <h2>Sebaran Kelas Pelatihan</h2>
+                <p>Jumlah kelas berdasarkan lokasi penyelenggaraan</p>
               </div>
             </div>
-            <div class="legend" id="locationLegend"></div>
+            <div class="location-total-badge" aria-label="Total kelas pada periode ini">
+              <strong id="locationMapTotal">0</strong>
+              <span>Total Kelas</span>
+            </div>
+          </div>
+
+          <div class="location-map-layout">
+            <div class="indonesia-map-wrap" aria-label="Peta sebaran kelas pelatihan di Indonesia">
+              <svg id="indonesiaMap" class="indonesia-map" viewBox="0 0 1000 340" role="img" aria-labelledby="indonesiaMapTitle indonesiaMapDesc">
+                <title id="indonesiaMapTitle">Sebaran lokasi kelas pelatihan</title>
+                <desc id="indonesiaMapDesc">Peta Indonesia dengan penanda jumlah kelas pada kota penyelenggaraan.</desc>
+                <defs>
+                  <linearGradient id="mapFill" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#dbeafe"></stop>
+                    <stop offset="100%" stop-color="#a9c9ee"></stop>
+                  </linearGradient>
+                  <filter id="markerShadow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2.4" flood-color="#0b2f6b" flood-opacity="0.22"></feDropShadow>
+                  </filter>
+                </defs>
+                <g class="map-islands" aria-hidden="true">
+                  <polygon points="50,43 100,62 150,99 194,136 246,183 270,231 230,233 186,199 134,161 86,116 50,75"></polygon>
+                  <polygon points="254,230 310,235 370,241 430,253 470,266 440,280 370,276 310,268 260,256"></polygon>
+                  <polygon points="310,72 370,55 450,72 510,116 494,178 436,204 370,193 330,152"></polygon>
+                  <polygon points="530,105 574,110 604,127 580,152 614,173 592,194 560,176 550,233 526,226 534,178 506,169 536,146"></polygon>
+                  <polygon points="750,152 830,131 910,156 970,169 970,270 890,278 830,248 790,214"></polygon>
+                  <polygon points="440,270 464,273 466,281 444,281"></polygon>
+                  <polygon points="466,273 484,275 482,285 468,283"></polygon>
+                  <polygon points="484,273 534,273 538,283 492,287"></polygon>
+                  <polygon points="540,273 610,273 614,283 550,285"></polygon>
+                  <polygon points="620,287 686,287 680,307 630,303"></polygon>
+                  <polygon points="700,102 730,109 726,131 704,126"></polygon>
+                  <polygon points="710,186 760,186 764,194 718,196"></polygon>
+                  <polygon points="670,186 694,186 692,196 672,194"></polygon>
+                  <ellipse cx="283" cy="87" rx="10" ry="5"></ellipse>
+                  <ellipse cx="293" cy="107" rx="7" ry="4"></ellipse>
+                  <ellipse cx="320" cy="243" rx="8" ry="3"></ellipse>
+                  <ellipse cx="707" cy="158" rx="5" ry="8"></ellipse>
+                  <ellipse cx="738" cy="149" rx="5" ry="7"></ellipse>
+                  <ellipse cx="690" cy="215" rx="5" ry="4"></ellipse>
+                </g>
+                <g id="locationMapMarkers" class="location-map-markers"></g>
+              </svg>
+              <div class="map-watermark">INDONESIA</div>
+            </div>
+
+            <div class="location-map-list" id="locationMapList" aria-label="Daftar lokasi yang dipetakan"></div>
+          </div>
+
+          <div class="unmapped-location-panel" id="locationUnmapped" hidden>
+            <div class="unmapped-location-copy">
+              <svg class="icon"><use href="#icon-pin"></use></svg>
+              <div>
+                <strong>Lokasi Lainnya / Tidak Spesifik</strong>
+                <span>Lokasi kosong, virtual, atau tidak dapat dipetakan ditampilkan di luar peta.</span>
+              </div>
+            </div>
+            <div class="unmapped-location-chips" id="locationUnmappedChips"></div>
           </div>
         </article>
 
@@ -601,5 +649,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
   <script src="/static/app.js" defer></script>
+<a href="/penugasan" style="position:fixed;bottom:18px;left:18px;background:#123b76;color:white;padding:12px 16px;border-radius:12px;z-index:999;text-decoration:none;font-weight:700;box-shadow:0 5px 18px #123b7640">♟ Penugasan Tim ▾</a>
 </body>
 </html>

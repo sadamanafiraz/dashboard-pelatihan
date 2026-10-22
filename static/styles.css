@@ -2264,3 +2264,350 @@ body.exporting-dashboard .donut-wrap {
   .edit-modal-actions-right > button, .delete-training-button { flex: 1; justify-content: center; }
   .delete-target-card { grid-template-columns: 1fr; gap: 3px; }
 }
+
+
+/* ===== V5.14 - Sebaran kelas pelatihan berbasis peta Indonesia ===== */
+@media (min-width: 1281px) {
+  .analytics-grid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.72fr) minmax(250px, 0.78fr);
+  }
+
+  .location-panel {
+    grid-column: span 2;
+  }
+
+  .type-panel {
+    grid-column: 3;
+  }
+
+  .highlight-panel {
+    grid-column: 1 / -1;
+    min-height: auto;
+  }
+
+  .highlight-list {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .highlight-item {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .highlight-divider {
+    width: 1px;
+    height: auto;
+    min-height: 56px;
+    margin: 0 4px;
+  }
+}
+
+.location-map-heading {
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.location-map-heading > div:first-child {
+  align-items: flex-start;
+}
+
+.location-map-heading p {
+  margin: 3px 0 0;
+  color: var(--ink-500);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.location-total-badge {
+  display: flex;
+  min-width: 96px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid #d7e3f5;
+  border-radius: 12px;
+  background: #f4f8fe;
+  color: var(--ink-700);
+  white-space: nowrap;
+}
+
+.location-total-badge strong {
+  color: var(--green-900);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.location-total-badge span {
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.location-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, 0.32fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.indonesia-map-wrap {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e2eaf5;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 18% 16%, rgba(31, 99, 181, 0.06), transparent 28%),
+    linear-gradient(180deg, #fbfdff 0%, #f5f9ff 100%);
+}
+
+.indonesia-map {
+  display: block;
+  width: 100%;
+  min-height: 205px;
+  overflow: visible;
+}
+
+.map-islands polygon,
+.map-islands ellipse {
+  fill: url(#mapFill);
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.map-watermark {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  color: rgba(11, 47, 107, 0.13);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  pointer-events: none;
+}
+
+.map-marker {
+  cursor: default;
+  filter: url(#markerShadow);
+  outline: none;
+}
+
+.map-marker-halo {
+  opacity: 0.14;
+}
+
+.map-marker-dot {
+  stroke: #fff;
+  stroke-width: 2.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.map-marker-count {
+  fill: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.map-marker-label text {
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  fill: #0b2f6b;
+  font-size: 10px;
+  font-weight: 800;
+  vector-effect: non-scaling-stroke;
+}
+
+.map-marker-label .map-marker-label-value {
+  fill: #52627a;
+  font-size: 8.5px;
+  font-weight: 700;
+}
+
+.location-map-list {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  max-height: 235px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.location-map-list-item {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid #e3eaf4;
+  border-radius: 10px;
+  background: rgba(250, 252, 255, 0.95);
+}
+
+.location-map-color {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.location-map-name,
+.location-map-value {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.location-map-name strong {
+  overflow: hidden;
+  color: var(--ink-800);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-map-name small,
+.location-map-value small {
+  color: var(--ink-400);
+  font-size: 8px;
+}
+
+.location-map-value {
+  justify-items: end;
+}
+
+.location-map-value strong {
+  color: var(--green-900);
+  font-size: 12px;
+}
+
+.unmapped-location-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid #dce5f2;
+  border-radius: 12px;
+  background: #f8fafd;
+}
+
+.unmapped-location-panel[hidden] {
+  display: none !important;
+}
+
+.unmapped-location-copy {
+  display: flex;
+  min-width: 190px;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.unmapped-location-copy .icon {
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  color: var(--ink-400);
+}
+
+.unmapped-location-copy div {
+  display: grid;
+  gap: 2px;
+}
+
+.unmapped-location-copy strong {
+  color: var(--ink-700);
+  font-size: 9.5px;
+}
+
+.unmapped-location-copy span {
+  color: var(--ink-400);
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.unmapped-location-chips {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.unmapped-location-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid #dde5ef;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink-600);
+  font-size: 8.5px;
+}
+
+.unmapped-location-chip strong {
+  color: var(--ink-700);
+}
+
+.unmapped-location-chip span {
+  color: var(--ink-400);
+}
+
+body.exporting-dashboard .indonesia-map-wrap,
+body.exporting-dashboard .indonesia-map,
+body.exporting-dashboard .location-map-layout,
+body.exporting-dashboard .location-panel {
+  overflow: visible !important;
+}
+
+@media (max-width: 1280px) {
+  .location-panel {
+    grid-column: 1 / -1;
+  }
+
+  .location-map-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(190px, 0.34fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .location-map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .location-map-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: none;
+  }
+
+  .unmapped-location-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .unmapped-location-copy {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .location-map-heading {
+    gap: 10px;
+  }
+
+  .location-total-badge {
+    min-width: auto;
+  }
+
+  .location-map-list {
+    grid-template-columns: 1fr;
+  }
+
+  .map-marker-label {
+    display: none;
+  }
+}
