@@ -7,6 +7,8 @@
   <meta name="description" content="Dashboard GIA Corpu BPKP dengan data pelatihan mingguan terpusat di NeonDB.">
   <title>GIA Corpu Weekly Training</title>
   <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.15.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="/static/maplibre-location-map.css">
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true">
@@ -218,6 +220,7 @@
 
           <div class="location-map-layout">
             <div class="indonesia-map-wrap" aria-label="Peta sebaran kelas pelatihan di Indonesia">
+              <div id="trainingMap" class="training-maplibre" aria-label="Peta Indonesia interaktif dengan sebaran kelas pelatihan"></div>
               <svg id="indonesiaMap" class="indonesia-map" viewBox="0 0 1000 340" role="img" aria-labelledby="indonesiaMapTitle indonesiaMapDesc">
                 <title id="indonesiaMapTitle">Sebaran lokasi kelas pelatihan</title>
                 <desc id="indonesiaMapDesc">Peta Indonesia dengan penanda jumlah kelas pada kota penyelenggaraan.</desc>
@@ -650,6 +653,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
   <script src="/static/app.js" defer></script>
+  <script type="module" src="/static/maplibre-location-map.js"></script>
 <a href="/penugasan" style="position:fixed;bottom:18px;left:18px;background:#123b76;color:white;padding:12px 16px;border-radius:12px;z-index:999;text-decoration:none;font-weight:700;box-shadow:0 5px 18px #123b7640">♟ Penugasan Tim ▾</a>
 </body>
 </html>

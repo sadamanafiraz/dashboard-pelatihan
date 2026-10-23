@@ -1,0 +1,91 @@
+/* V5.16 - real Indonesia basemap using MapLibre + OpenFreeMap.
+   The legacy SVG remains in the DOM as a zero-cost fallback if the map service cannot load. */
+.indonesia-map-wrap {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.training-maplibre {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  opacity: 0;
+  background: #eef5fc;
+  transition: opacity .18s ease;
+}
+
+.indonesia-map-wrap.maplibre-ready .training-maplibre {
+  opacity: 1;
+}
+
+/* Keep legacy SVG dimensions so the card height/layout is unchanged, but hide it once the real map is ready. */
+.indonesia-map-wrap.maplibre-ready > .indonesia-map,
+.indonesia-map-wrap.maplibre-ready > .map-watermark {
+  visibility: hidden;
+}
+
+.training-maplibre .maplibregl-canvas {
+  outline: 0;
+  filter: saturate(.78) brightness(1.035) contrast(.96);
+}
+
+.training-maplibre .maplibregl-canvas-container,
+.training-maplibre .maplibregl-canvas {
+  border-radius: inherit;
+}
+
+.training-maplibre .maplibregl-popup-content {
+  padding: 10px 12px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(16, 50, 95, .18);
+  font-family: inherit;
+  color: #102d57;
+  line-height: 1.35;
+}
+
+.training-maplibre .maplibregl-popup-content strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 12px;
+}
+
+.training-maplibre .maplibregl-popup-content span {
+  font-size: 10px;
+  color: #6b7d95;
+}
+
+.training-maplibre .maplibregl-popup-close-button {
+  font-size: 15px;
+  color: #6b7d95;
+  padding: 2px 6px;
+}
+
+.training-maplibre .maplibregl-ctrl-attrib {
+  font-size: 8px;
+  line-height: 1.2;
+  background: rgba(255,255,255,.78);
+}
+
+.training-maplibre .maplibregl-ctrl-attrib-button {
+  width: 20px;
+  height: 20px;
+}
+
+/* When html2canvas/export temporarily applies layout changes, force the map to stay clipped to the card. */
+.exporting-dashboard .training-maplibre,
+.export-mode .training-maplibre,
+[data-exporting="true"] .training-maplibre {
+  overflow: hidden !important;
+}
+
+@media (max-width: 900px) {
+  .training-maplibre .maplibregl-ctrl-attrib {
+    max-width: 160px;
+  }
+}
