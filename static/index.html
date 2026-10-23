@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.15.0/dist/maplibre-gl.css">
   <link rel="stylesheet" href="/static/maplibre-location-map.css">
+  <link rel="stylesheet" href="/static/type-insight-v5-17.css">
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true">
@@ -283,6 +284,15 @@
             </div>
           </div>
           <div class="bar-chart" id="typeBars"></div>
+          <div class="type-insight" id="typeInsight" aria-live="polite">
+            <div class="type-insight-icon" aria-hidden="true">
+              <svg class="icon"><use href="#icon-info"></use></svg>
+            </div>
+            <div>
+              <span class="type-insight-label">Pelatihan terbanyak</span>
+              <p id="typeInsightText">Belum ada data.</p>
+            </div>
+          </div>
         </article>
 
         <article class="panel highlight-panel">
@@ -654,6 +664,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script type="module" src="/static/maplibre-location-map.js"></script>
+  <script src="/static/type-insight-v5-17.js" defer></script>
 <a href="/penugasan" style="position:fixed;bottom:18px;left:18px;background:#123b76;color:white;padding:12px 16px;border-radius:12px;z-index:999;text-decoration:none;font-weight:700;box-shadow:0 5px 18px #123b7640">♟ Penugasan Tim ▾</a>
 </body>
 </html>

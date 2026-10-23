@@ -1,0 +1,72 @@
+/* V5.17 — simplify analytics layout and move the type insight into the type card */
+
+/* Keep legacy highlight DOM available for the existing application logic,
+   but remove the card from the visual layout and PNG export. */
+.highlight-panel {
+  display: none !important;
+}
+
+.type-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.type-panel .bar-chart {
+  flex: 0 0 auto;
+}
+
+.type-insight {
+  margin-top: auto;
+  padding: 16px 16px;
+  border: 1px solid rgba(38, 104, 190, 0.16);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(237,246,255,.96), rgba(248,251,255,.98));
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 82px;
+}
+
+.type-insight-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #1558a6;
+  background: rgba(37, 117, 210, 0.10);
+  flex: 0 0 auto;
+}
+
+.type-insight-icon .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.type-insight-label {
+  display: block;
+  color: #6b7b91;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.type-insight p {
+  margin: 0;
+  color: #0a2342;
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+/* With the highlight card hidden, the analytics row should end immediately
+   after the location and type cards. */
+.analytics-grid {
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .type-insight {
+    margin-top: 14px;
+  }
+}
